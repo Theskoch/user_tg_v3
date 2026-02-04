@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VPN Mini App</title>
+
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app">
+
+  <header class="topbar">
+    <div class="user">
+      <div class="avatar" id="avatar">U</div>
+      <div>
+        <div class="label">Баланс</div>
+        <div class="balance" id="balance">—</div>
+      </div>
+    </div>
+
+    <div class="menu">
+      <button id="burger">☰</button>
+      <div class="dropdown" id="dropdown">
+        <div class="row">
+          <span>Тариф</span>
+          <b id="tariff">—</b>
+        </div>
+        <button id="reload">Обновить</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <h2>VPN подключения</h2>
+    <div id="vpnList"></div>
+  </main>
+
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
