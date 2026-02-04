@@ -1,18 +1,24 @@
 from flask import Flask, jsonify, send_from_directory
+from pathlib import Path
 import random
 
-app = Flask(__name__, static_folder="../frontend")
+BASE_DIR = Path(__file__).resolve().parent
+FRONTEND_DIR = (BASE_DIR / ".." / "frontend").resolve()
 
-# ---------- API ----------
+app = Flask(
+    __name__,
+    static_folder=str(FRONTEND_DIR),
+    static_url_path=""   # раздаём статику прямо из корня: /styles.css, /app.js
+)
 
+# ---------- API (заглушки) ----------
 @app.route("/api/user")
 def user():
     return jsonify({
-        "balance": round(random.uniform(3, 25), 2),
-        "tariff": "Premium",
-        "avatar_letter": "U"
+        "balance": round(random.uniform(100, 500), 2),
+        "tariff": "Basic",
+        "next_charge": "01.01.2026"
     })
-
 
 @app.route("/api/vpn")
 def vpn_list():
@@ -20,32 +26,15 @@ def vpn_list():
         {
             "name": "Germany #1",
             "status": "online",
-            "expires": "2026-03-01"
-        },
-        {
-            "name": "Netherlands #2",
-            "status": "offline",
-            "expires": "2026-02-15"
-        },
-        {
-            "name": "Finland #1",
-            "status": "online",
-            "expires": "2026-04-10"
+            "expires": "2026-03-01",
+            "config": "vless://TEST@de1.example.com:443?security=tls&type=ws#Germany%20%231"
         }
     ])
 
-
 # ---------- Frontend ----------
-
 @app.route("/")
 def index():
-    return send_from_directory(app.static_folder, "index.html")
-
-
-@app.route("/<path:path>")
-def static_files(path):
-    return send_from_directory(app.static_folder, path)
-
+    return send_from_directory(str(FRONTEND_DIR), "index.html")
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8000, debug=True)
+    app.run(host="127.0.0.1", port=8000, debug=True)
