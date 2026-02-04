@@ -2,40 +2,133 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>VPN Mini App</title>
 
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <!-- QR (CDN) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 <div class="app">
 
+  <!-- Header / Topbar -->
   <header class="topbar">
     <div class="user">
       <div class="avatar" id="avatar">U</div>
-      <div>
+
+      <button class="balanceBtn" id="balanceBtn" type="button">
         <div class="label">Баланс</div>
         <div class="balance" id="balance">—</div>
-      </div>
+      </button>
     </div>
 
     <div class="menu">
-      <button id="burger">☰</button>
+      <button class="burger" id="burger" aria-label="Меню">
+        <span></span><span></span><span></span>
+      </button>
+
       <div class="dropdown" id="dropdown">
-        <div class="row">
-          <span>Тариф</span>
-          <b id="tariff">—</b>
+        <div class="dropdown-title">Тариф</div>
+        <div class="tariffLine">
+          <div class="tariffName" id="tariffName">—</div>
+          <div class="tariffPrice" id="tariffPrice">—</div>
         </div>
-        <button id="reload">Обновить</button>
+        <div class="nextPay" id="nextPay">Следующее списание: —</div>
+
+        <div class="dropdown-sep"></div>
+        <button class="dropdown-btn" id="btnRefresh">Обновить</button>
       </div>
     </div>
   </header>
 
-  <main>
-    <h2>VPN подключения</h2>
-    <div id="vpnList"></div>
+  <!-- Pages -->
+  <main class="content">
+
+    <!-- PAGE: HOME -->
+    <section class="page page-active" id="pageHome">
+      <h2 class="section-title">VPN подключения</h2>
+      <div class="list" id="vpnList"></div>
+    </section>
+
+    <!-- PAGE: TARIFFS -->
+    <section class="page" id="pageTariffs">
+      <div class="pageHeader">
+        <button class="backBtn" id="backFromTariffs" type="button">←</button>
+        <div class="pageTitle">Выбор тарифа</div>
+      </div>
+
+      <div class="cards">
+        <button class="card" data-tariff="1" type="button">
+          <div class="cardTitle">1 месяц</div>
+          <div class="cardValue">150 ₽</div>
+        </button>
+
+        <button class="card" data-tariff="6" type="button">
+          <div class="cardTitle">6 месяцев</div>
+          <div class="cardValue">700 ₽</div>
+        </button>
+
+        <button class="card" data-tariff="12" type="button">
+          <div class="cardTitle">12 месяцев</div>
+          <div class="cardValue">1200 ₽</div>
+        </button>
+      </div>
+
+      <div class="hint">Пока заглушка: по нажатию просто поменяем отображение тарифа.</div>
+    </section>
+
+    <!-- PAGE: TOPUP -->
+    <section class="page" id="pageTopup">
+      <div class="pageHeader">
+        <button class="backBtn" id="backFromTopup" type="button">←</button>
+        <div class="pageTitle">Пополнение</div>
+      </div>
+
+      <div class="cards">
+        <button class="card" id="payStars" type="button">
+          <div class="cardTitle">⭐ За звезды</div>
+          <div class="cardValue">Открыть</div>
+        </button>
+
+        <button class="card" id="payCrypto" type="button">
+          <div class="cardTitle">₿ Крипта</div>
+          <div class="cardValue">Открыть</div>
+        </button>
+
+        <button class="card" id="payTransfer" type="button">
+          <div class="cardTitle">⇄ Перевод</div>
+          <div class="cardValue">Открыть</div>
+        </button>
+      </div>
+
+      <div class="hint">Пока заглушка: потом подвяжем оплату.</div>
+    </section>
+
   </main>
+
+  <!-- Bottom sheet for VPN connect -->
+  <div class="sheetOverlay" id="sheetOverlay"></div>
+  <div class="sheet" id="sheet">
+    <div class="sheetHandle"></div>
+
+    <div class="sheetTitle" id="sheetTitle">Подключение</div>
+
+    <div class="qrWrap">
+      <div id="qr"></div>
+    </div>
+
+    <div class="copyHint" id="copyHint">Нажми на конфиг ниже — скопируется</div>
+
+    <button class="configBox" id="configBox" type="button" title="Нажми чтобы скопировать">
+      <div class="configText" id="configText">—</div>
+      <div class="configSub">Tap to copy</div>
+    </button>
+
+    <button class="sheetClose" id="sheetClose" type="button">Закрыть</button>
+  </div>
 
 </div>
 
