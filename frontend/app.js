@@ -1,8 +1,5 @@
 const tg = window.Telegram?.WebApp;
-if (tg) {
-  tg.ready();
-  tg.expand();
-}
+if (tg) { tg.ready(); tg.expand(); }
 
 const el = (id) => document.getElementById(id);
 
@@ -25,26 +22,30 @@ const pageHome = el("pageHome");
 const pageTariffs = el("pageTariffs");
 const pageTopup = el("pageTopup");
 
-const backFromTariffs = el("backFromTariffs");
-const backFromTopup = el("backFromTopup");
+el("backFromTariffs").addEventListener("click", () => showPage("home"));
+el("backFromTopup").addEventListener("click", () => showPage("home"));
 
-// Tariff cards
-document.querySelectorAll("[data-tariff]").forEach(btn => {
-  btn.addEventListener("click", () => {
-    const m = btn.getAttribute("data-tariff");
-    // Заглушка: меняем тариф в UI
-    if (m === "1") setTariffUI("Basic", "150 ₽/мес", "01.01.2026");
-    if (m === "6") setTariffUI("Half-year", "700 ₽/6 мес", "01.01.2026");
-    if (m === "12") setTariffUI("Year", "1200 ₽/12 мес", "01.01.2026");
-    showPage("home");
-    toast("Тариф выбран (заглушка)");
-  });
+btnRefresh.addEventListener("click", () => {
+  dropdown.style.display = "none";
+  showPage("tariffs");
 });
 
-// Topup buttons (заглушки)
+balanceBtn.addEventListener("click", () => {
+  dropdown.style.display = "none";
+  showPage("topup");
+});
+
 el("payStars").addEventListener("click", () => toast("Оплата звездами — заглушка"));
 el("payCrypto").addEventListener("click", () => toast("Крипта — заглушка"));
 el("payTransfer").addEventListener("click", () => toast("Перевод — заглушка"));
+
+// Menu
+burger.addEventListener("click", () => {
+  dropdown.style.display = dropdown.style.display === "block" ? "none" : "block";
+});
+document.addEventListener("click", (e) => {
+  if (!e.target.closest(".menu")) dropdown.style.display = "none";
+});
 
 // Bottom sheet
 const sheet = el("sheet");
@@ -53,7 +54,6 @@ const sheetTitle = el("sheetTitle");
 const sheetClose = el("sheetClose");
 const configBox = el("configBox");
 const configText = el("configText");
-const copyHint = el("copyHint");
 
 let currentConfig = "";
 
@@ -70,7 +70,6 @@ function openSheet({ title, config }) {
   sheetTitle.textContent = title || "Подключение";
   currentConfig = config || "";
   configText.textContent = currentConfig || "—";
-
   renderQR(currentConfig);
 
   sheet.classList.add("open");
@@ -85,50 +84,16 @@ function closeSheet() {
 function renderQR(text) {
   const qrWrap = document.getElementById("qr");
   qrWrap.innerHTML = "";
-
-  // Если CDN не загрузился — покажем текст
   if (!window.QRCode) {
-    const fallback = document.createElement("div");
-    fallback.style.color = "#000";
-    fallback.style.fontFamily = "monospace";
-    fallback.style.fontSize = "12px";
-    fallback.textContent = "QR lib не загрузилась";
-    qrWrap.appendChild(fallback);
+    const d = document.createElement("div");
+    d.style.color = "#000";
+    d.style.fontFamily = "monospace";
+    d.textContent = "QR lib не загрузилась";
+    qrWrap.appendChild(d);
     return;
   }
-
-  // QRCode.js рисует в контейнер
-  new QRCode(qrWrap, {
-    text: text || "empty",
-    width: 180,
-    height: 180,
-    correctLevel: QRCode.CorrectLevel.M
-  });
+  new QRCode(qrWrap, { text: text || "empty", width: 180, height: 180 });
 }
-
-// Menu
-burger.addEventListener("click", () => {
-  dropdown.style.display = dropdown.style.display === "block" ? "none" : "block";
-});
-
-// Закрытие меню по тапу вне
-document.addEventListener("click", (e) => {
-  if (!e.target.closest(".menu")) dropdown.style.display = "none";
-});
-
-// Navigation
-btnRefresh.addEventListener("click", () => {
-  dropdown.style.display = "none";
-  showPage("tariffs");
-});
-
-balanceBtn.addEventListener("click", () => {
-  dropdown.style.display = "none";
-  showPage("topup");
-});
-
-backFromTariffs.addEventListener("click", () => showPage("home"));
-backFromTopup.addEventListener("click", () => showPage("home"));
 
 function showPage(name) {
   pageHome.classList.remove("page-active");
@@ -154,48 +119,64 @@ function setAvatarLetterFromTelegram() {
 }
 
 function formatRub(amount) {
-  // Простая заглушка форматтера ₽
   const n = Number(amount || 0);
   return `${n.toFixed(2)} ₽`;
 }
 
-// Заглушки данных
-async function loadMockData() {
-  // Можно заменить на fetch("/api/user") — пока просто UI-заглушка.
-  const balance = 325.50; // ₽
-  balanceEl.textContent = formatRub(balance);
+async function apiGet(path) {
+  const r = await fetch(path, { cache: "no-store" });
+  if (!r.ok) throw new Error(`${path} -> HTTP ${r.status}`);
+  return r.json();
+}
 
-  // Тариф с ценой и датой списания
-  setTariffUI("Basic", "150 ₽/мес", "01.01.2026");
+async function loadAll() {
+  setAvatarLetterFromTelegram();
 
-  // VPN подключения (с конфигом для QR/копирования)
-  const vpns = [
-    {
-      name: "Germany #1",
-      status: "online",
-      expires: "2026-03-01",
-      config: "vless://TEST-UUID@de1.example.com:443?encryption=none&security=tls&type=ws#Germany%20%231"
-    },
-    {
-      name: "Netherlands #2",
-      status: "offline",
-      expires: "2026-02-15",
-      config: "vless://TEST-UUID@nl2.example.com:443?encryption=none&security=tls&type=ws#Netherlands%20%232"
-    },
-    {
-      name: "Finland #1",
-      status: "online",
-      expires: "2026-04-10",
-      config: "vless://TEST-UUID@fi1.example.com:443?encryption=none&security=tls&type=ws#Finland%20%231"
-    }
-  ];
+  const user = await apiGet("/api/user");
+  balanceEl.textContent = formatRub(user.balance_rub);
+  setTariffUI(user.tariff_name, user.tariff_price_text, user.next_charge);
 
+  const vpns = await apiGet("/api/vpn");
   renderVpnList(vpns);
+
+  const tariffs = await apiGet("/api/tariffs");
+  renderTariffs(tariffs);
+}
+
+function renderTariffs(tariffs) {
+  const wrap = document.getElementById("tariffCards");
+  wrap.innerHTML = "";
+
+  tariffs.forEach(t => {
+    const btn = document.createElement("button");
+    btn.className = "card";
+    btn.type = "button";
+    btn.innerHTML = `
+      <div class="cardTitle">${t.months} ${pluralMonths(t.months)}</div>
+      <div class="cardValue">${t.price_rub} ₽</div>
+    `;
+    btn.addEventListener("click", () => {
+      // заглушка: просто отражаем в меню выбранное
+      if (t.months === 1) setTariffUI("Basic", "150 ₽/мес", "01.01.2026");
+      if (t.months === 6) setTariffUI("Half-year", "700 ₽/6 мес", "01.01.2026");
+      if (t.months === 12) setTariffUI("Year", "1200 ₽/12 мес", "01.01.2026");
+      showPage("home");
+      toast("Тариф выбран (заглушка)");
+    });
+
+    wrap.appendChild(btn);
+  });
+}
+
+function pluralMonths(n) {
+  // 1 месяц, 6 месяцев, 12 месяцев
+  if (n % 10 === 1 && n % 100 !== 11) return "месяц";
+  if ([2,3,4].includes(n % 10) && ![12,13,14].includes(n % 100)) return "месяца";
+  return "месяцев";
 }
 
 function renderVpnList(vpns) {
   vpnList.innerHTML = "";
-
   vpns.forEach(v => {
     const row = document.createElement("div");
     row.className = "vpn";
@@ -216,10 +197,7 @@ function renderVpnList(vpns) {
     btn.type = "button";
     btn.textContent = "Подключить";
     btn.addEventListener("click", () => {
-      openSheet({
-        title: `Подключение: ${v.name}`,
-        config: v.config
-      });
+      openSheet({ title: `Подключение: ${v.name}`, config: v.config });
     });
 
     const right = document.createElement("div");
@@ -231,26 +209,22 @@ function renderVpnList(vpns) {
 
     row.appendChild(left);
     row.appendChild(right);
-
     vpnList.appendChild(row);
   });
 }
 
 function escapeHtml(s) {
   return String(s || "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
+    .replaceAll("&", "&amp;").replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;").replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
 }
 
 async function copyToClipboard(text) {
-  // В Telegram Mini App часто работает navigator.clipboard, но добавим fallback
   try {
     await navigator.clipboard.writeText(text);
     return true;
-  } catch (_) {
+  } catch {
     const ta = document.createElement("textarea");
     ta.value = text;
     document.body.appendChild(ta);
@@ -262,14 +236,11 @@ async function copyToClipboard(text) {
 }
 
 function toast(text) {
-  if (tg?.showToast) {
-    tg.showToast({ message: text });
-    return;
-  }
-  // простой fallback
-  console.log("[toast]", text);
+  if (tg?.showToast) tg.showToast({ message: text });
+  else console.log("[toast]", text);
 }
 
-// Init
-setAvatarLetterFromTelegram();
-loadMockData();
+loadAll().catch(err => {
+  console.error(err);
+  toast("Ошибка загрузки данных");
+});

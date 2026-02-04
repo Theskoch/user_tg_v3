@@ -6,17 +6,16 @@
   <title>VPN Mini App</title>
 
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
   <!-- QR (CDN) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
-  <link rel="stylesheet" href="/styles.css?v=3">
-<script src="/app.js?v=3"></script>
-
+  <!-- ВАЖНО: грузим статику через /static -->
+  <link rel="stylesheet" href="/static/styles.css?v=1">
 </head>
 <body>
 <div class="app">
 
-  <!-- Header / Topbar -->
   <header class="topbar">
     <div class="user">
       <div class="avatar" id="avatar">U</div>
@@ -28,7 +27,7 @@
     </div>
 
     <div class="menu">
-      <button class="burger" id="burger" aria-label="Меню">
+      <button class="burger" id="burger" aria-label="Меню" type="button">
         <span></span><span></span><span></span>
       </button>
 
@@ -41,48 +40,30 @@
         <div class="nextPay" id="nextPay">Следующее списание: —</div>
 
         <div class="dropdown-sep"></div>
-        <button class="dropdown-btn" id="btnRefresh">Обновить</button>
+        <button class="dropdown-btn" id="btnRefresh" type="button">Обновить</button>
       </div>
     </div>
   </header>
 
-  <!-- Pages -->
   <main class="content">
-
-    <!-- PAGE: HOME -->
+    <!-- HOME -->
     <section class="page page-active" id="pageHome">
       <h2 class="section-title">VPN подключения</h2>
       <div class="list" id="vpnList"></div>
     </section>
 
-    <!-- PAGE: TARIFFS -->
+    <!-- TARIFFS -->
     <section class="page" id="pageTariffs">
       <div class="pageHeader">
         <button class="backBtn" id="backFromTariffs" type="button">←</button>
         <div class="pageTitle">Выбор тарифа</div>
       </div>
 
-      <div class="cards">
-        <button class="card" data-tariff="1" type="button">
-          <div class="cardTitle">1 месяц</div>
-          <div class="cardValue">150 ₽</div>
-        </button>
-
-        <button class="card" data-tariff="6" type="button">
-          <div class="cardTitle">6 месяцев</div>
-          <div class="cardValue">700 ₽</div>
-        </button>
-
-        <button class="card" data-tariff="12" type="button">
-          <div class="cardTitle">12 месяцев</div>
-          <div class="cardValue">1200 ₽</div>
-        </button>
-      </div>
-
-      <div class="hint">Пока заглушка: по нажатию просто поменяем отображение тарифа.</div>
+      <div class="cards" id="tariffCards"></div>
+      <div class="hint">Пока заглушка: по нажатию просто меняем отображение тарифа.</div>
     </section>
 
-    <!-- PAGE: TOPUP -->
+    <!-- TOPUP -->
     <section class="page" id="pageTopup">
       <div class="pageHeader">
         <button class="backBtn" id="backFromTopup" type="button">←</button>
@@ -108,10 +89,9 @@
 
       <div class="hint">Пока заглушка: потом подвяжем оплату.</div>
     </section>
-
   </main>
 
-  <!-- Bottom sheet for VPN connect -->
+  <!-- Bottom sheet -->
   <div class="sheetOverlay" id="sheetOverlay"></div>
   <div class="sheet" id="sheet">
     <div class="sheetHandle"></div>
@@ -124,16 +104,15 @@
 
     <div class="copyHint" id="copyHint">Нажми на конфиг ниже — скопируется</div>
 
-    <button class="configBox" id="configBox" type="button" title="Нажми чтобы скопировать">
+    <button class="configBox" id="configBox" type="button">
       <div class="configText" id="configText">—</div>
       <div class="configSub">Tap to copy</div>
     </button>
 
     <button class="sheetClose" id="sheetClose" type="button">Закрыть</button>
   </div>
-
 </div>
 
-<script src="app.js"></script>
+<script src="/static/app.js?v=1"></script>
 </body>
 </html>
