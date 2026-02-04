@@ -1,16 +1,22 @@
 from flask import Flask, jsonify, send_from_directory
 from pathlib import Path
-import random
 
-BASE_DIR = Path(__file__).resolve().parent          # .../miniapp/backend
-FRONTEND_DIR = (BASE_DIR / ".." / "frontend").resolve()
+BASE_DIR = Path(__file__).resolve().parent              # /root/testvp3/user_tg_v3/backend
+FRONTEND_DIR = (BASE_DIR.parent / "frontend").resolve() # /root/testvp3/user_tg_v3/frontend
 
 app = Flask(__name__)
+
+# --- no cache (чтобы Telegram не держал старьё) ---
+@app.after_request
+def add_no_cache(resp):
+    resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    resp.headers["Pragma"] = "no-cache"
+    resp.headers["Expires"] = "0"
+    return resp
 
 # ---------- API (заглушки) ----------
 @app.get("/api/user")
 def api_user():
-    # Заглушки
     return jsonify({
         "balance_rub": 325.50,
         "tariff_name": "Basic",
@@ -57,20 +63,20 @@ def api_tariffs():
 def index():
     return send_from_directory(FRONTEND_DIR, "index.html")
 
-@app.get("/static/<path:filename>")
-def static_files(filename: str):
-    # раздаём ВСЮ статику строго из frontend/
+# раздаём файлы напрямую: /styles.css, /app.js
+@app.get("/<path:filename>")
+def frontend_files(filename: str):
     return send_from_directory(FRONTEND_DIR, filename)
 
-def sanity_check_paths():
+def sanity():
     if not FRONTEND_DIR.exists():
         raise RuntimeError(f"FRONTEND_DIR not found: {FRONTEND_DIR}")
-    for f in ["index.html", "styles.css", "app.js"]:
-        p = FRONTEND_DIR / f
-        if not p.exists():
-            raise RuntimeError(f"Missing file: {p}")
+    needed = ["index.html", "styles.css", "app.js"]
+    for f in needed:
+        if not (FRONTEND_DIR / f).exists():
+            raise RuntimeError(f"Missing: {FRONTEND_DIR / f}")
 
 if __name__ == "__main__":
-    sanity_check_paths()
-    # Важно: оставь 127.0.0.1 если прокси рядом, либо 0.0.0.0 если тестишь из сети напрямую
-    app.run(host="127.0.0.1", port=8000, debug=True)
+    sanity()
+    # раз ты уже поднял через 0.0.0.0 — оставь так
+    app.run(host="0.0.0.0", port=8000, debug=True)
