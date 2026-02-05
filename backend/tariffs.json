@@ -1,0 +1,6 @@
+[
+  { "key": "lite_1",  "name": "Lite",  "months": 1,  "price_rub": 150 },
+  { "key": "uwuw_6",  "name": "Uwuw",  "months": 6,  "price_rub": 700 },
+  { "key": "pro_12",  "name": "Pro",   "months": 12, "price_rub": 1200 },
+  { "key": "prime_12","name": "Prime", "months": 12, "price_rub": 1 }
+]

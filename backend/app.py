@@ -4,6 +4,12 @@ import json
 import hmac
 import hashlib
 from urllib.parse import parse_qsl
+import os
+
+def load_tariffs():
+    p = (BASE_DIR / "tariffs.json").resolve()
+    with open(p, "r", encoding="utf-8") as f:
+        return json.load(f)
 
 from config import TG_BOT_TOKEN
 from db import (
@@ -127,6 +133,13 @@ def api_my_configs():
     return jsonify(admin_list_configs(tg_id))
 
 # ---------- ADMIN ----------
+@app.post("/api/admin/tariffs")
+def api_admin_tariffs():
+    tg_user = get_tg_user_from_request()
+    tg_id = int(tg_user["id"])
+    require_admin(tg_id)
+    return jsonify(load_tariffs())
+
 @app.post("/api/admin/invite")
 def api_admin_invite():
     tg_user = get_tg_user_from_request()
