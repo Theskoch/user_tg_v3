@@ -12,9 +12,7 @@
   <!-- QR scanner lib -->
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 
-  <!-- Если у тебя уже был QRCode (для отрисовки QR в sheet) — оставь.
-       Если не было — можно подключить (не обязательно для работы). -->
-  <!-- <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script> -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 </head>
 <body>
 
@@ -123,14 +121,31 @@
         <input id="adminUserBalanceInput" class="input" placeholder="Новый баланс, число" />
         <div class="grid" style="margin-top:10px">
           <button id="adminSaveBalance" class="btn" type="button">Сохранить</button>
-          <button id="adminOpenConfigs" class="btn ghost" type="button">Конфиги</button>
         </div>
         <div id="adminBalanceErr" class="err" style="display:none"></div>
       </div>
 
       <div class="card">
+        <div class="cardTitle">Тариф</div>
+
+        <div class="row">
+          <div class="muted">Текущий:</div>
+          <div class="big" id="adminUserTariffNow">—</div>
+        </div>
+
+        <select id="adminTariffSelect" class="input"></select>
+
+        <div class="grid" style="margin-top:10px">
+          <button id="adminSaveTariff" class="btn" type="button">Сохранить тариф</button>
+        </div>
+
+        <div id="adminTariffErr" class="err" style="display:none"></div>
+      </div>
+
+      <div class="card">
         <div class="cardTitle">Действия</div>
         <button id="adminDeleteUser" class="btn danger" type="button">Удалить учётку</button>
+        <button id="adminOpenConfigs" class="btn ghost" type="button">Конфиги</button>
       </div>
     </div>
 

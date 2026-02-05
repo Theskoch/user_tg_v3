@@ -66,6 +66,8 @@ function showPage(name) {
   if (name === "admin") el("pageAdmin")?.classList.add("page-active");
   if (name === "adminUser") el("pageAdminUser")?.classList.add("page-active");
   if (name === "adminConfigs") el("pageAdminConfigs")?.classList.add("page-active");
+  const isAdminPage = (name === "admin" || name === "adminUser" || name === "adminConfigs");
+  document.body.classList.toggle("hideTopbar", isAdminPage);
 }
 
 // ================== Menu ==================
@@ -178,6 +180,7 @@ function renderUserConfigs(cfgs) {
 }
 
 // ================== Admin state ==================
+let TARIFFS_CACHE = null;
 let ME = null;
 let ADMIN_SELECTED_USER_ID = null;
 let ADMIN_SELECTED_USER = null;
@@ -327,6 +330,59 @@ async function openAdminUserPage(u) {
       btn.textContent = old;
       btn.disabled = false;
     }
+    // тарифы
+try {
+  const tariffs = await loadTariffs();
+  el("adminUserTariffNow").textContent = u.tariff_name || "—";
+
+  const sel = el("adminTariffSelect");
+  sel.innerHTML = tariffs.map(t => `
+    <option value="${t.id}">${escapeHtml(t.name)} — ${t.price_rub} ₽ / ${t.period_months} мес</option>
+  `).join("");
+
+  // выставим текущий
+  const current = tariffs.find(t => t.name === u.tariff_name);
+  if (current) sel.value = String(current.id);
+
+  addPressFx(el("adminSaveTariff"));
+  el("adminSaveTariff").onclick = async () => {
+    const err = el("adminTariffErr");
+    err.style.display = "none"; err.textContent = "";
+
+    const tariffId = Number(sel.value);
+    if (!tariffId) {
+      err.style.display = "block";
+      err.textContent = "Выберите тариф.";
+      return;
+    }
+
+    const btn = el("adminSaveTariff");
+    const old = btn.textContent;
+    btn.textContent = "Сохраняем...";
+    btn.disabled = true;
+
+    try {
+      await api("/api/admin/user/set_tariff", {
+        target_tg_user_id: ADMIN_SELECTED_USER_ID,
+        tariff_id: tariffId
+      });
+
+      const t = tariffs.find(x => x.id === tariffId);
+      el("adminUserTariffNow").textContent = t ? t.name : "—";
+      ADMIN_SELECTED_USER.tariff_name = t ? t.name : ADMIN_SELECTED_USER.tariff_name;
+      toast("Тариф сохранён");
+    } catch {
+      err.style.display = "block";
+      err.textContent = "Ошибка сохранения тарифа.";
+    } finally {
+      btn.textContent = old;
+      btn.disabled = false;
+    }
+  };
+} catch (e) {
+  console.warn("tariffs failed", e);
+}
+
   };
 
   // configs
@@ -635,5 +691,14 @@ async function boot() {
     console.error(e);
   }
 }
+
+async function loadTariffs() {
+  if (TARIFFS_CACHE) return TARIFFS_CACHE;
+  // ожидаю что у тебя уже есть эндпоинт (если нет — скажи, я дам backend)
+  const r = await api("/api/tariffs");
+  TARIFFS_CACHE = r.tariffs || r; 
+  return TARIFFS_CACHE;
+}
+
 
 boot().catch(console.error);

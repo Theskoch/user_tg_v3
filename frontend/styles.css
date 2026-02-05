@@ -275,3 +275,5 @@ body{
   background:#000;
   margin-top:10px;
 }
+.hideTopbar .topbar { display:none; }
+.hideTopbar .pages { margin-top:0; }
