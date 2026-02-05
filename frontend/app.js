@@ -43,30 +43,9 @@ async function api(path, payload = {}) {
 
 function mustBeTelegram() {
   if (!tg || !tg.initData) {
-    showBlockingScreen("Ошибка запуска", "Перейдите в Telegram.");
-    throw new Error("Not Telegram");
+    document.body.innerHTML = `<div style="color:#fff;padding:30px;font-family:system-ui">Ошибка запуска. Перейдите в Telegram.</div>`;
+    throw new Error("Not in Telegram");
   }
-}
-
-function showBlockingScreen(title, text, extraHtml = "") {
-  document.body.innerHTML = `
-    <style>
-      .btn { width:100%; padding:12px; border-radius:10px; border:none; background:#2a7fff; color:#fff; font-weight:800; }
-      .btn.secondary{ background:#2a2f3a; color:#fff; font-weight:700; }
-      .btn.danger{ background:#a83232; color:#fff; font-weight:800; }
-      .pressed{ transform: scale(.98); filter: brightness(.95); }
-      .err { color:#ff5a5a; margin-top:10px; font-size:14px; }
-      .spin { display:inline-block; width:16px; height:16px; border:2px solid rgba(255,255,255,.35); border-top-color:#fff; border-radius:50%; animation: spin 0.8s linear infinite; vertical-align: -3px; }
-      @keyframes spin { to { transform: rotate(360deg);} }
-    </style>
-    <div style="min-height:100vh;background:#0e1014;color:#fff;padding:20px;font-family:system-ui">
-      <div style="max-width:440px;margin:50px auto">
-        <div style="font-size:20px;font-weight:900;margin-bottom:10px">${escapeHtml(title)}</div>
-        <div style="opacity:.85;line-height:1.4;margin-bottom:14px">${escapeHtml(text)}</div>
-        ${extraHtml}
-      </div>
-    </div>
-  `;
 }
 
 function setAvatarLetter() {
@@ -81,47 +60,18 @@ function formatRub(x) {
   return `${n.toFixed(2)} ₽`;
 }
 
-// ================== SHEET (bottom) ==================
-function openSheet(title, configText) {
-  const sheet = el("sheet");
-  const overlay = el("sheetOverlay");
-  const sheetTitle = el("sheetTitle");
-  const textEl = el("configText");
-  const qrWrap = document.getElementById("qr");
+// ================== PAGES ==================
+function showPage(name) {
+  const ids = ["pageHome", "pageTopup", "pageAdmin", "pageAdminConfigs"];
+  ids.forEach(id => el(id)?.classList.remove("page-active"));
 
-  if (sheetTitle) sheetTitle.textContent = title || "Конфиг";
-  if (textEl) textEl.textContent = configText || "";
-
-  if (qrWrap) {
-    qrWrap.innerHTML = "";
-    if (window.QRCode) {
-      new QRCode(qrWrap, { text: configText || "empty", width: 180, height: 180 });
-    } else {
-      // если QRCode lib нет — просто пусто
-    }
-  }
-
-  sheet?.classList.add("open");
-  overlay?.classList.add("open");
+  if (name === "home") el("pageHome")?.classList.add("page-active");
+  if (name === "topup") el("pageTopup")?.classList.add("page-active");
+  if (name === "admin") el("pageAdmin")?.classList.add("page-active");
+  if (name === "adminConfigs") el("pageAdminConfigs")?.classList.add("page-active");
 }
 
-function wireSheet() {
-  el("sheetOverlay")?.addEventListener("click", () => {
-    el("sheet")?.classList.remove("open");
-    el("sheetOverlay")?.classList.remove("open");
-  });
-  el("sheetClose")?.addEventListener("click", () => {
-    el("sheet")?.classList.remove("open");
-    el("sheetOverlay")?.classList.remove("open");
-  });
-  el("configBox")?.addEventListener("click", async () => {
-    const text = el("configText")?.textContent || "";
-    if (!text.trim()) return;
-    try { await navigator.clipboard.writeText(text); toast("Скопировано"); } catch {}
-  });
-}
-
-// ================== UI INIT ==================
+// ================== MENU ==================
 function wireMenu() {
   const burger = el("burger");
   const dropdown = el("dropdown");
@@ -140,519 +90,328 @@ function wireMenu() {
   });
 }
 
-function showPage(name) {
-  el("pageHome")?.classList.remove("page-active");
-  el("pageTariffs")?.classList.remove("page-active");
-  el("pageTopup")?.classList.remove("page-active");
+function wireTopup() {
+  const btn = el("btnRefresh");
+  const balanceBtn = el("balanceBtn");
 
-  if (name === "home") el("pageHome")?.classList.add("page-active");
-  if (name === "tariffs") el("pageTariffs")?.classList.add("page-active");
-  if (name === "topup") el("pageTopup")?.classList.add("page-active");
-}
-
-function wireTopupEntry() {
-  // кнопка в меню: "Пополнить"
-  const btnRefresh = el("btnRefresh");
-  if (btnRefresh) {
-    btnRefresh.textContent = "Пополнить";
-    addPressFx(btnRefresh);
-    btnRefresh.onclick = () => {
+  if (btn) {
+    addPressFx(btn);
+    btn.textContent = "Пополнить";
+    btn.onclick = () => {
       el("dropdown").style.display = "none";
       showPage("topup");
     };
   }
 
-  // клик по балансу
-  const balanceBtn = el("balanceBtn");
   if (balanceBtn) {
     addPressFx(balanceBtn);
     balanceBtn.onclick = () => showPage("topup");
   }
 
-  el("backFromTopup")?.addEventListener("click", () => showPage("home"));
+  el("backFromTopup") && (el("backFromTopup").onclick = () => showPage("home"));
 }
 
-// ================== INVITE SCREEN ==================
-function showInviteScreen() {
-  showBlockingScreen(
-    "У вас отсутствует доступ.",
-    "Введите код приглашения:",
-    `
-      <input id="inviteCode" placeholder="Код"
-        style="width:100%;padding:10px;border-radius:8px;border:none;margin:10px 0">
-      <button id="inviteBtn" class="btn">Авторизоваться</button>
-      <div id="inviteErr" class="err" style="display:none"></div>
-    `
-  );
+// ================== SHEET ==================
+function openSheet(title, configText) {
+  const sheet = el("sheet");
+  const overlay = el("sheetOverlay");
+  const sheetTitle = el("sheetTitle");
+  const textEl = el("configText");
+  const qrWrap = el("qr");
 
-  const btn = el("inviteBtn");
-  const err = el("inviteErr");
-  addPressFx(btn);
+  if (sheetTitle) sheetTitle.textContent = title || "Конфиг";
+  if (textEl) textEl.textContent = configText || "";
 
-  btn.onclick = async () => {
-    const code = el("inviteCode").value.trim();
-    if (!code) {
-      err.style.display = "block";
-      err.textContent = "Введите код.";
-      return;
+  // QR render if QRCode library exists
+  if (qrWrap) {
+    qrWrap.innerHTML = "";
+    if (window.QRCode && configText) {
+      new QRCode(qrWrap, { text: configText, width: 180, height: 180 });
     }
+  }
 
-    btn.disabled = true;
-    btn.innerHTML = `<span class="spin"></span> Проверяем...`;
-    err.style.display = "none";
-    err.textContent = "";
-
-    try {
-      await api("/api/redeem", { code });
-      // автопереход в ЛК: возвращаемся на /
-      window.location.href = "/?autologin=1";
-      return;
-    } catch (e) {
-      err.style.display = "block";
-      err.textContent = "Код неверный или уже использован.";
-    } finally {
-      btn.disabled = false;
-      btn.textContent = "Авторизоваться";
-    }
-  };
+  sheet?.classList.add("open");
+  overlay?.classList.add("open");
 }
 
-// ================== USER MAIN LIST (configs) ==================
-function renderUserConfigs(myCfgs) {
+function wireSheet() {
+  const overlay = el("sheetOverlay");
+  const closeBtn = el("sheetClose");
+  const box = el("configBox");
+
+  if (overlay) overlay.onclick = () => { el("sheet")?.classList.remove("open"); overlay.classList.remove("open"); };
+  if (closeBtn) {
+    addPressFx(closeBtn);
+    closeBtn.onclick = () => { el("sheet")?.classList.remove("open"); el("sheetOverlay")?.classList.remove("open"); };
+  }
+  if (box) {
+    box.onclick = async () => {
+      const text = el("configText")?.textContent || "";
+      if (!text.trim()) return;
+      try { await navigator.clipboard.writeText(text); toast("Скопировано"); } catch {}
+    };
+  }
+}
+
+// ================== USER LIST ==================
+function renderUserConfigs(cfgs) {
   const list = el("vpnList");
   if (!list) return;
 
   list.innerHTML = "";
-  myCfgs.forEach(c => {
-    const row = document.createElement("div");
-    row.className = "vpn";
+
+  (cfgs || []).forEach(c => {
     const inactive = !c.is_active;
 
-    row.innerHTML = `
-      <div class="vpnLeft">
-        <b style="${inactive ? "opacity:.45" : ""}">${escapeHtml(c.title)}</b>
-        <small style="${inactive ? "opacity:.45" : ""}">${inactive ? "заблокирован" : "активен"}</small>
+    const node = document.createElement("div");
+    node.className = "item";
+    node.style.opacity = inactive ? "0.45" : "1";
+
+    node.innerHTML = `
+      <div class="itemTop">
+        <div>
+          <div class="itemTitle">${escapeHtml(c.title)}</div>
+          <div class="itemSub">${inactive ? "заблокирован" : "активен"}</div>
+        </div>
+        <div class="tag">${inactive ? "off" : "on"}</div>
       </div>
-      <div style="display:flex;gap:10px;align-items:center">
-        <button class="connectBtn" type="button" ${inactive ? "disabled" : ""} style="${inactive ? "opacity:.45" : ""}">
-          Открыть
-        </button>
+
+      <div class="btnRow">
+        <button class="bigBtn ${inactive ? "ghost" : "primary"}" style="flex:1" ${inactive ? "disabled" : ""}>Открыть</button>
       </div>
     `;
 
-    const btn = row.querySelector("button");
+    const btn = node.querySelector("button");
     addPressFx(btn);
-    btn.addEventListener("click", () => {
+    btn.onclick = () => {
       if (inactive) return;
       openSheet(c.title, c.config_text);
-    });
+    };
 
-    list.appendChild(row);
-  });
-}
-
-// ================== ADMIN OVERLAY (НЕ перетирает body) ==================
-function ensureAdminOverlayStyles() {
-  if (document.getElementById("adminOverlayStyles")) return;
-  const st = document.createElement("style");
-  st.id = "adminOverlayStyles";
-  st.textContent = `
-    .adminOverlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:flex-end}
-    .adminPanel{width:100%;max-height:92vh;overflow:auto;background:#0e1014;color:#fff;border-radius:18px 18px 0 0;padding:14px 14px 20px;font-family:system-ui}
-    .adminTop{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
-    .adminTitle{font-weight:900;font-size:16px}
-    .adminBtn{border:none;border-radius:12px;padding:10px 12px;background:#2a2f3a;color:#fff;font-weight:800}
-    .adminBtn.primary{background:#2a7fff}
-    .adminBtn.danger{background:#a83232}
-    .adminBtn.ghost{background:transparent;border:1px solid #2a2f3a}
-    .adminRow{padding:12px 0;border-bottom:1px solid #2a2f3a;cursor:pointer}
-    .adminMuted{opacity:.75;font-size:12px}
-    .adminTag{display:inline-block;font-size:11px;padding:3px 8px;border-radius:999px;background:#2a2f3a;color:#fff;opacity:.9}
-    .adminConfig{padding:12px 0;border-bottom:1px solid #2a2f3a}
-    .adminConfig.inactive{opacity:.45}
-    .adminBtns{display:flex;gap:10px;margin-top:10px}
-    .adminInput{width:100%;padding:10px;border-radius:10px;border:none;background:#161b24;color:#fff}
-    .adminTextarea{width:100%;min-height:110px;padding:10px;border-radius:10px;border:none;background:#161b24;color:#fff;resize:vertical}
-    .pressed{ transform: scale(.98); filter: brightness(.95); }
-  `;
-  document.head.appendChild(st);
-}
-
-function openAdminOverlay(title, renderFn) {
-  ensureAdminOverlayStyles();
-
-  // закрыть если есть
-  document.getElementById("adminOverlay")?.remove();
-
-  const overlay = document.createElement("div");
-  overlay.id = "adminOverlay";
-  overlay.className = "adminOverlay";
-
-  const panel = document.createElement("div");
-  panel.className = "adminPanel";
-
-  panel.innerHTML = `
-    <div class="adminTop">
-      <div class="adminTitle">${escapeHtml(title)}</div>
-      <button id="adminClose" class="adminBtn ghost">Закрыть</button>
-    </div>
-    <div id="adminBody"></div>
-  `;
-
-  overlay.appendChild(panel);
-  document.body.appendChild(overlay);
-
-  overlay.addEventListener("click", (e) => {
-    if (e.target === overlay) overlay.remove();
+    list.appendChild(node);
   });
 
-  const closeBtn = panel.querySelector("#adminClose");
-  addPressFx(closeBtn);
-  closeBtn.onclick = () => overlay.remove();
-
-  renderFn(panel.querySelector("#adminBody"), overlay);
+  if ((cfgs || []).length === 0) {
+    list.innerHTML = `<div class="skeleton">Пока нет подключений</div>`;
+  }
 }
 
-// ================== ADMIN: button in menu ==================
-function addAdminButton() {
-  const menu = document.querySelector(".dropdown");
+// ================== ADMIN ==================
+let IS_ADMIN = false;
+let ADMIN_SELECTED_USER_ID = null;
+
+function addAdminMenuButton() {
+  const menu = el("dropdown");
   if (!menu) return;
-  if (document.getElementById("adminBtn")) return;
+  if (el("adminMenuBtn")) return;
+
+  const spacer = document.createElement("div");
+  spacer.style.height = "8px";
+  menu.appendChild(spacer);
 
   const btn = document.createElement("button");
-  btn.id = "adminBtn";
+  btn.id = "adminMenuBtn";
   btn.className = "dropdown-btn";
   btn.type = "button";
   btn.textContent = "Админ-консоль";
   addPressFx(btn);
 
-  btn.onclick = () => {
+  btn.onclick = async () => {
     el("dropdown").style.display = "none";
-    openAdminConsole().catch(err => {
-      console.error(err);
-      toast("Ошибка админки");
-    });
+    await openAdminPage();
+    showPage("admin");
   };
-
-  // небольшой отступ чтобы не слипалось с "Пополнить"
-  const spacer = document.createElement("div");
-  spacer.style.height = "8px";
-  menu.appendChild(spacer);
 
   menu.appendChild(btn);
 }
 
-let USERS_CACHE = [];
-let CURRENT_USER = null;
+async function openAdminPage() {
+  el("adminBackHome").onclick = () => showPage("home");
 
-// ================== ADMIN: console/users ==================
-async function openAdminConsole() {
-  USERS_CACHE = await api("/api/admin/users");
+  // invite buttons
+  addPressFx(el("invUser"));
+  addPressFx(el("invAdmin"));
 
-  openAdminOverlay("Админ-консоль", (body, overlay) => {
-    body.innerHTML = `
-      <div style="display:flex;gap:10px;margin:10px 0 14px">
-        <button id="invUser" class="adminBtn">+ User</button>
-        <button id="invAdmin" class="adminBtn">+ Admin</button>
-      </div>
+  el("invUser").onclick = async () => {
+    const r = await api("/api/admin/invite", { role: "user" });
+    try { await navigator.clipboard.writeText(r.code); } catch {}
+    toast("Код User скопирован");
+  };
 
-      <div id="usersList" style="border-top:1px solid #2a2f3a"></div>
-    `;
+  el("invAdmin").onclick = async () => {
+    const r = await api("/api/admin/invite", { role: "admin" });
+    try { await navigator.clipboard.writeText(r.code); } catch {}
+    toast("Код Admin скопирован");
+  };
 
-    const invUser = body.querySelector("#invUser");
-    const invAdmin = body.querySelector("#invAdmin");
-    addPressFx(invUser); addPressFx(invAdmin);
-
-    invUser.onclick = () => createInvite("user");
-    invAdmin.onclick = () => createInvite("admin");
-
-    const list = body.querySelector("#usersList");
-    list.innerHTML = USERS_CACHE.map(u => `
-      <div class="adminRow" data-id="${u.tg_user_id}">
-        <div style="font-weight:900">
-          ${escapeHtml(u.first_name || "")}
-          <span class="adminMuted">@${escapeHtml(u.username || "")}</span>
-          ${u.role === "admin" ? `<span class="adminTag" style="margin-left:8px">admin</span>` : ``}
-        </div>
-        <div class="adminMuted">${u.balance_rub} ₽ • ${escapeHtml(u.tariff_name)}</div>
-      </div>
-    `).join("");
-
-    [...list.querySelectorAll("[data-id]")].forEach(div => {
-      addPressFx(div);
-      div.onclick = () => openUserCard(Number(div.getAttribute("data-id")));
-    });
-  });
+  const users = await api("/api/admin/users");
+  renderAdminUsers(users);
 }
 
-async function createInvite(role) {
-  const r = await api("/api/admin/invite", { role });
-  try { await navigator.clipboard.writeText(r.code); } catch {}
-  toast("Код скопирован");
+function renderAdminUsers(users) {
+  const box = el("adminUsersList");
+  if (!box) return;
 
-  openAdminOverlay("Код приглашения", (body) => {
-    body.innerHTML = `
-      <div style="font-weight:900;font-size:18px;word-break:break-all;background:#161b24;padding:12px;border-radius:12px;border:1px solid #2a2f3a">
-        ${escapeHtml(r.code)}
-      </div>
-      <div class="adminMuted" style="margin-top:8px">Роль: ${escapeHtml(role)}</div>
-    `;
-  });
-}
+  box.innerHTML = "";
 
-// ================== ADMIN: user card ==================
-async function openUserCard(targetTgId) {
-  USERS_CACHE = await api("/api/admin/users");
-  CURRENT_USER = USERS_CACHE.find(x => x.tg_user_id === targetTgId);
-
-  openAdminOverlay("Пользователь", (body) => {
-    body.innerHTML = `
-      <div style="margin-bottom:10px">
-        <div style="font-weight:900;font-size:18px">
-          ${escapeHtml(CURRENT_USER.first_name || "")}
-          <span class="adminMuted">@${escapeHtml(CURRENT_USER.username || "")}</span>
+  users.forEach(u => {
+    const node = document.createElement("div");
+    node.className = "item";
+    node.innerHTML = `
+      <div class="itemTop">
+        <div>
+          <div class="itemTitle">
+            ${escapeHtml(u.first_name || "")}
+            <span style="opacity:.7">@${escapeHtml(u.username || "")}</span>
+          </div>
+          <div class="itemSub">${u.balance_rub} ₽ • ${escapeHtml(u.tariff_name)} • ${u.role}</div>
         </div>
-        <div class="adminMuted">Баланс: <b id="uBal">${Number(CURRENT_USER.balance_rub).toFixed(2)} ₽</b></div>
-        <div class="adminMuted">Роль: <span class="adminTag">${escapeHtml(CURRENT_USER.role)}</span></div>
+        <div class="tag">${u.role}</div>
       </div>
-
-      <div style="border-top:1px solid #2a2f3a;padding-top:12px">
-        <div class="adminMuted">Новый баланс</div>
-        <input id="balInp" class="adminInput" value="${CURRENT_USER.balance_rub}">
-        <div class="adminBtns">
-          <button id="saveBal" class="adminBtn">Сохранить баланс</button>
-          <button id="configsBtn" class="adminBtn primary">Конфиги пользователя</button>
-        </div>
-        <div id="balErr" class="adminMuted" style="color:#ff5a5a;display:none;margin-top:8px"></div>
-      </div>
-
-      <div style="margin-top:14px">
-        <button id="delUser" class="adminBtn danger">Удалить учётку</button>
+      <div class="btnRow">
+        <button class="bigBtn primary" style="flex:1">Конфиги</button>
       </div>
     `;
 
-    const saveBal = body.querySelector("#saveBal");
-    const configsBtn = body.querySelector("#configsBtn");
-    const delUser = body.querySelector("#delUser");
-
-    addPressFx(saveBal); addPressFx(configsBtn); addPressFx(delUser);
-
-    saveBal.onclick = async () => {
-      const err = body.querySelector("#balErr");
-      err.style.display = "none";
-      err.textContent = "";
-
-      const val = Number(body.querySelector("#balInp").value);
-      if (Number.isNaN(val)) {
-        err.style.display = "block";
-        err.textContent = "Баланс должен быть числом.";
-        return;
-      }
-
-      saveBal.disabled = true;
-      const old = saveBal.textContent;
-      saveBal.textContent = "Сохраняем...";
-
-      try {
-        await api("/api/admin/user/set_balance", { target_tg_user_id: targetTgId, balance_rub: val });
-        body.querySelector("#uBal").textContent = `${val.toFixed(2)} ₽`;
-        toast("Сохранено");
-      } catch {
-        err.style.display = "block";
-        err.textContent = "Ошибка сохранения.";
-      } finally {
-        saveBal.disabled = false;
-        saveBal.textContent = old;
-      }
+    const btn = node.querySelector("button");
+    addPressFx(btn);
+    btn.onclick = async () => {
+      ADMIN_SELECTED_USER_ID = Number(u.tg_user_id);
+      await openAdminConfigsPage(ADMIN_SELECTED_USER_ID, u);
+      showPage("adminConfigs");
     };
 
-    configsBtn.onclick = () => openUserConfigs(targetTgId);
-
-    delUser.onclick = async () => {
-      if (!confirm("Удалить пользователя?")) return;
-      await api("/api/admin/user/delete", { target_tg_user_id: targetTgId });
-      toast("Удалено");
-      openAdminConsole();
-    };
+    box.appendChild(node);
   });
+
+  if ((users || []).length === 0) {
+    box.innerHTML = `<div class="skeleton">Пользователей нет</div>`;
+  }
 }
 
-// ================== ADMIN: configs screen (list/open/block/delete/add) ==================
-async function openUserConfigs(targetTgId) {
-  const cfgs = await api("/api/admin/configs/list", { target_tg_user_id: targetTgId });
+// ================== ADMIN CONFIGS PAGE ==================
+async function openAdminConfigsPage(targetTgId, userObj = null) {
+  el("configsBackAdmin").onclick = () => showPage("admin");
 
-  openAdminOverlay("Конфиги пользователя", (body) => {
-    body.innerHTML = `
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px">
-        <div class="adminMuted">Нажми на конфиг чтобы открыть</div>
-        <button id="addBtn" class="adminBtn primary">+</button>
-      </div>
+  const title = userObj
+    ? `Конфиги: ${userObj.first_name || ""}`
+    : `Конфиги`;
 
-      <div id="cfgList"></div>
-    `;
+  el("configsTitle").textContent = title;
 
-    const addBtn = body.querySelector("#addBtn");
-    addPressFx(addBtn);
-    addBtn.onclick = () => openAddConfigComposer(targetTgId);
+  // composer controls
+  el("cfgErr").style.display = "none";
+  el("cfgComposer").style.display = "none";
+  el("cfgText").value = "";
 
-    const list = body.querySelector("#cfgList");
-    list.innerHTML = (cfgs || []).map(c => `
-      <div class="adminConfig ${c.is_active ? "" : "inactive"}" data-id="${c.id}">
-        <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
-          <div>
-            <div style="font-weight:900">${escapeHtml(c.title)}</div>
-            <div class="adminMuted" style="word-break:break-all;margin-top:4px">${escapeHtml(c.config_text).slice(0, 90)}${c.config_text.length>90?"…":""}</div>
-          </div>
-          <div style="text-align:right">
-            <div class="adminTag">${c.is_active ? "активен" : "заблокирован"}</div>
-          </div>
-        </div>
+  addPressFx(el("cfgAddBtn"));
+  addPressFx(el("cfgCloseComposerBtn"));
+  addPressFx(el("scanQrBtn"));
+  addPressFx(el("saveCfgBtn"));
 
-        <div class="adminBtns">
-          <button class="adminBtn" data-open="${c.id}" ${c.is_active ? "" : "disabled"} style="${c.is_active ? "" : "opacity:.4"}">Открыть</button>
-          <button class="adminBtn" data-block="${c.id}">${c.is_active ? "Блокировать" : "Разблок."}</button>
-          <button class="adminBtn danger" data-del="${c.id}">Удалить</button>
-        </div>
-      </div>
-    `).join("");
+  el("cfgAddBtn").onclick = () => { el("cfgComposer").style.display = "block"; };
+  el("cfgCloseComposerBtn").onclick = () => { el("cfgComposer").style.display = "none"; };
 
-    // open
-    [...list.querySelectorAll("[data-open]")].forEach(b => {
-      addPressFx(b);
-      b.onclick = () => {
-        const id = Number(b.getAttribute("data-open"));
-        const c = cfgs.find(x => x.id === id);
-        if (!c || !c.is_active) return;
-        openSheet(c.title, c.config_text);
-      };
-    });
+  el("scanQrBtn").onclick = async () => {
+    const scanned = await openQrScanner();
+    if (scanned) el("cfgText").value = scanned;
+  };
 
-    // block/unblock
-    [...list.querySelectorAll("[data-block]")].forEach(b => {
-      addPressFx(b);
-      b.onclick = async () => {
-        const id = Number(b.getAttribute("data-block"));
-        const c = cfgs.find(x => x.id === id);
-        if (!c) return;
-        await api("/api/admin/configs/update", {
-          config_id: id,
-          title: c.title,
-          config_text: c.config_text,
-          is_active: c.is_active ? 0 : 1
-        });
-        toast(c.is_active ? "Заблокировано" : "Разблокировано");
-        openUserConfigs(targetTgId);
-      };
-    });
-
-    // delete with confirm
-    [...list.querySelectorAll("[data-del]")].forEach(b => {
-      addPressFx(b);
-      b.onclick = async () => {
-        const id = Number(b.getAttribute("data-del"));
-        const c = cfgs.find(x => x.id === id);
-        if (!c) return;
-        if (!confirm(`Удалить конфиг "${c.title}"?`)) return;
-        await api("/api/admin/configs/delete", { config_id: id });
-        toast("Удалено");
-        openUserConfigs(targetTgId);
-      };
-    });
-  });
-}
-
-// ================== ADMIN: add config composer + QR scanner ==================
-function openAddConfigComposer(targetTgId) {
-  // сделаем маленькое bottom-меню поверх (не мешает sheet)
-  ensureAdminOverlayStyles();
-
-  // remove old if exists
-  document.getElementById("adminComposer")?.remove();
-
-  const wrap = document.createElement("div");
-  wrap.id = "adminComposer";
-  wrap.className = "adminOverlay"; // используем тот же фон
-  wrap.style.alignItems = "flex-end";
-
-  const panel = document.createElement("div");
-  panel.className = "adminPanel";
-  panel.style.maxHeight = "70vh";
-
-  panel.innerHTML = `
-    <div class="adminTop">
-      <div class="adminTitle">Добавить конфиг</div>
-      <button id="cmpClose" class="adminBtn ghost">Закрыть</button>
-    </div>
-
-    <div class="adminMuted" style="margin-bottom:8px">Вставь текст или отсканируй QR</div>
-    <textarea id="cfgText" class="adminTextarea" placeholder="vless://... или любой текст конфига"></textarea>
-
-    <div class="adminBtns" style="margin-top:10px">
-      <button id="scanQr" class="adminBtn secondary" style="flex:1">Сканировать QR</button>
-      <button id="saveCfg" class="adminBtn primary" style="flex:1">Сохранить</button>
-    </div>
-
-    <div id="cmpErr" class="adminMuted" style="color:#ff5a5a;display:none;margin-top:10px"></div>
-  `;
-
-  wrap.appendChild(panel);
-  document.body.appendChild(wrap);
-
-  wrap.addEventListener("click", (e) => {
-    if (e.target === wrap) wrap.remove();
-  });
-
-  const closeBtn = panel.querySelector("#cmpClose");
-  const scanBtn = panel.querySelector("#scanQr");
-  const saveBtn = panel.querySelector("#saveCfg");
-  const err = panel.querySelector("#cmpErr");
-  const txt = panel.querySelector("#cfgText");
-
-  addPressFx(closeBtn); addPressFx(scanBtn); addPressFx(saveBtn);
-
-  closeBtn.onclick = () => wrap.remove();
-
-  saveBtn.onclick = async () => {
-    err.style.display = "none"; err.textContent = "";
-    const val = (txt.value || "").trim();
-    if (!val) {
-      err.style.display = "block";
-      err.textContent = "Текст конфига пустой.";
+  el("saveCfgBtn").onclick = async () => {
+    const txt = (el("cfgText").value || "").trim();
+    if (!txt) {
+      el("cfgErr").style.display = "block";
+      el("cfgErr").textContent = "Текст подключения пустой.";
       return;
     }
 
-    saveBtn.disabled = true;
-    const old = saveBtn.textContent;
-    saveBtn.textContent = "Сохраняем...";
+    el("cfgErr").style.display = "none";
+    await api("/api/admin/configs/add", {
+      target_tg_user_id: targetTgId,
+      title: "Config",
+      config_text: txt
+    });
+    toast("Добавлено");
+    el("cfgText").value = "";
+    el("cfgComposer").style.display = "none";
 
-    try {
-      await api("/api/admin/configs/add", {
-        target_tg_user_id: targetTgId,
-        title: "Config",
-        config_text: val
-      });
-      toast("Добавлено");
-      wrap.remove();
-      openUserConfigs(targetTgId);
-    } catch {
-      err.style.display = "block";
-      err.textContent = "Ошибка сохранения.";
-    } finally {
-      saveBtn.disabled = false;
-      saveBtn.textContent = old;
-    }
+    const cfgs2 = await api("/api/admin/configs/list", { target_tg_user_id: targetTgId });
+    renderAdminConfigsList(targetTgId, cfgs2);
   };
 
-  scanBtn.onclick = async () => {
-    const scanned = await openQrScanner();
-    if (scanned) {
-      txt.value = scanned;
-      toast("QR считан");
-    }
-  };
+  const cfgs = await api("/api/admin/configs/list", { target_tg_user_id: targetTgId });
+  renderAdminConfigsList(targetTgId, cfgs);
 }
 
-// QR scanner overlay using getUserMedia + jsQR
+function renderAdminConfigsList(targetTgId, cfgs) {
+  const box = el("adminConfigsList");
+  if (!box) return;
+
+  box.innerHTML = "";
+
+  (cfgs || []).forEach(c => {
+    const inactive = !c.is_active;
+
+    const node = document.createElement("div");
+    node.className = "item";
+    node.style.opacity = inactive ? "0.55" : "1";
+
+    node.innerHTML = `
+      <div class="itemTop">
+        <div>
+          <div class="itemTitle">${escapeHtml(c.title)}</div>
+          <div class="itemSub">${escapeHtml(c.config_text).slice(0,140)}${c.config_text.length>140?"…":""}</div>
+        </div>
+        <div class="tag">${inactive ? "blocked" : "active"}</div>
+      </div>
+
+      <div class="btnRow">
+        <button class="bigBtn primary" data-open="${c.id}" style="flex:1">Открыть</button>
+        <button class="bigBtn" data-toggle="${c.id}" style="flex:1">${inactive ? "Разблок." : "Блокировать"}</button>
+        <button class="bigBtn danger" data-del="${c.id}" style="flex:1">Удалить</button>
+      </div>
+    `;
+
+    // open: админ может открыть всегда, даже если blocked
+    const btnOpen = node.querySelector(`[data-open="${c.id}"]`);
+    addPressFx(btnOpen);
+    btnOpen.onclick = () => openSheet(c.title, c.config_text);
+
+    // block/unblock: реально меняем is_active
+    const btnToggle = node.querySelector(`[data-toggle="${c.id}"]`);
+    addPressFx(btnToggle);
+    btnToggle.onclick = async () => {
+      await api("/api/admin/configs/update", {
+        config_id: c.id,
+        title: c.title,
+        config_text: c.config_text,
+        is_active: c.is_active ? 0 : 1
+      });
+      toast(c.is_active ? "Заблокировано" : "Разблокировано");
+      const cfgs2 = await api("/api/admin/configs/list", { target_tg_user_id: targetTgId });
+      renderAdminConfigsList(targetTgId, cfgs2);
+    };
+
+    // delete with confirm
+    const btnDel = node.querySelector(`[data-del="${c.id}"]`);
+    addPressFx(btnDel);
+    btnDel.onclick = async () => {
+      if (!confirm(`Удалить конфиг "${c.title}"?`)) return;
+      await api("/api/admin/configs/delete", { config_id: c.id });
+      toast("Удалено");
+      const cfgs2 = await api("/api/admin/configs/list", { target_tg_user_id: targetTgId });
+      renderAdminConfigsList(targetTgId, cfgs2);
+    };
+
+    box.appendChild(node);
+  });
+
+  if ((cfgs || []).length === 0) {
+    box.innerHTML = `<div class="skeleton">Конфигов пока нет</div>`;
+  }
+}
+
+// ================== QR SCANNER ==================
 async function openQrScanner() {
   if (!navigator.mediaDevices?.getUserMedia) {
     toast("Камера недоступна");
@@ -663,69 +422,48 @@ async function openQrScanner() {
     return null;
   }
 
-  // remove old
-  document.getElementById("qrScanner")?.remove();
+  // modal
+  const modal = document.createElement("div");
+  modal.className = "qrModal";
+
+  modal.innerHTML = `
+    <div class="qrBox">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+        <div style="font-weight:900;font-size:16px">Сканер QR</div>
+        <button id="qrClose" class="bigBtn ghost" style="min-height:44px;padding:10px 12px;border-radius:14px;font-size:14px">Закрыть</button>
+      </div>
+      <div class="muted" style="margin-top:6px">Наведи камеру на QR</div>
+      <video id="qrVideo" class="qrVideo" playsinline></video>
+      <canvas id="qrCanvas" style="display:none"></canvas>
+      <div id="qrHint" class="muted" style="margin-top:10px">Ожидание...</div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  const closeBtn = modal.querySelector("#qrClose");
+  addPressFx(closeBtn);
+
+  let stream = null;
+  let rafId = null;
+
+  async function stop() {
+    if (rafId) cancelAnimationFrame(rafId);
+    rafId = null;
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    stream = null;
+    modal.remove();
+  }
 
   return new Promise(async (resolve) => {
-    const overlay = document.createElement("div");
-    overlay.id = "qrScanner";
-    overlay.className = "adminOverlay";
-    overlay.style.alignItems = "center";
-    overlay.style.padding = "16px";
-
-    const box = document.createElement("div");
-    box.style.width = "100%";
-    box.style.maxWidth = "420px";
-    box.style.background = "#0e1014";
-    box.style.border = "1px solid #2a2f3a";
-    box.style.borderRadius = "16px";
-    box.style.padding = "12px";
-    box.style.color = "#fff";
-    box.style.fontFamily = "system-ui";
-
-    box.innerHTML = `
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px">
-        <div style="font-weight:900">Сканер QR</div>
-        <button id="qrClose" class="adminBtn ghost">Закрыть</button>
-      </div>
-      <div class="adminMuted" style="margin-bottom:10px">Наведи камеру на QR</div>
-      <video id="qrVideo" playsinline style="width:100%;border-radius:12px;background:#000"></video>
-      <canvas id="qrCanvas" style="display:none"></canvas>
-      <div class="adminMuted" id="qrHint" style="margin-top:10px;opacity:.85">Ожидание...</div>
-    `;
-
-    overlay.appendChild(box);
-    document.body.appendChild(overlay);
-
-    const closeBtn = box.querySelector("#qrClose");
-    addPressFx(closeBtn);
-
-    let stream = null;
-    let rafId = null;
-
-    async function stop() {
-      if (rafId) cancelAnimationFrame(rafId);
-      rafId = null;
-      if (stream) stream.getTracks().forEach(t => t.stop());
-      stream = null;
-      overlay.remove();
-    }
-
-    closeBtn.onclick = async () => {
-      await stop();
-      resolve(null);
-    };
-
-    overlay.addEventListener("click", async (e) => {
-      if (e.target === overlay) {
-        await stop();
-        resolve(null);
-      }
+    closeBtn.onclick = async () => { await stop(); resolve(null); };
+    modal.addEventListener("click", async (e) => {
+      if (e.target === modal) { await stop(); resolve(null); }
     });
 
-    const video = box.querySelector("#qrVideo");
-    const canvas = box.querySelector("#qrCanvas");
-    const hint = box.querySelector("#qrHint");
+    const video = modal.querySelector("#qrVideo");
+    const canvas = modal.querySelector("#qrCanvas");
+    const hint = modal.querySelector("#qrHint");
     const ctx = canvas.getContext("2d");
 
     try {
@@ -746,8 +484,8 @@ async function openQrScanner() {
         canvas.height = video.videoHeight;
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
-
         const code = window.jsQR(img.data, img.width, img.height, { inversionAttempts: "dontInvert" });
+
         if (code?.data) {
           hint.textContent = "Считано!";
           const data = code.data;
@@ -762,40 +500,93 @@ async function openQrScanner() {
   });
 }
 
-// ================== MAIN BOOT ==================
+// ================== BOOT ==================
 async function boot() {
   mustBeTelegram();
   setAvatarLetter();
   wireMenu();
-  wireTopupEntry();
+  wireTopup();
   wireSheet();
 
   try {
     const r = await api("/api/auth");
     const me = r.me;
 
-    // UI fill
-    if (el("balance")) el("balance").textContent = formatRub(me.balance_rub);
+    el("balance").textContent = formatRub(me.balance_rub);
+    el("tariffName").textContent = me.tariff?.name || "—";
+    el("tariffPrice").textContent = `${me.tariff?.price_rub ?? 0} ₽ / ${me.tariff?.period_months ?? 1} мес`;
+    el("nextPay").textContent = `Окончание: ${me.tariff?.expires_at || "—"}`;
 
-    if (el("tariffName")) el("tariffName").textContent = me.tariff?.name || "—";
-    if (el("tariffPrice")) el("tariffPrice").textContent = `${me.tariff?.price_rub ?? 0} ₽ / ${me.tariff?.period_months ?? 1} мес`;
-    if (el("nextPay")) el("nextPay").textContent = `Окончание: ${me.tariff?.expires_at || "—"}`;
-
-    // configs for user list
+    // user configs
     try {
       const myCfgs = await api("/api/my_configs");
       renderUserConfigs(myCfgs);
     } catch (e) {
-      console.warn("my_configs failed", e);
+      el("vpnList").innerHTML = `<div class="skeleton">Не удалось загрузить список</div>`;
+      console.warn(e);
     }
 
-    // admin button
-    if (me.role === "admin") addAdminButton();
+    IS_ADMIN = (me.role === "admin");
+    if (IS_ADMIN) addAdminMenuButton();
+
+    // admin navigation wiring
+    el("adminBackHome").onclick = () => showPage("home");
+    el("configsBackAdmin").onclick = () => showPage("admin");
 
     showPage("home");
   } catch (e) {
-    if (e.status === 403) return showInviteScreen();
-    showBlockingScreen("Ошибка запуска", "Перейдите в Telegram.");
+    if (e.status === 403) {
+      // invite screen (простая)
+      document.body.innerHTML = `
+        <div style="min-height:100vh;background:#0e1014;color:#fff;padding:22px;font-family:system-ui">
+          <div style="max-width:420px;margin:70px auto">
+            <div style="font-weight:900;font-size:20px;margin-bottom:10px">Доступ отсутствует</div>
+            <div style="opacity:.8;margin-bottom:12px">Введите код приглашения:</div>
+            <input id="inviteCode" style="width:100%;padding:14px;border-radius:14px;border:1px solid #2a2f3a;background:#161b24;color:#fff;font-size:16px" placeholder="Код">
+            <button id="inviteBtn" style="width:100%;margin-top:12px;min-height:56px;border-radius:16px;border:none;background:#2a7fff;color:#fff;font-weight:900;font-size:16px">Авторизоваться</button>
+            <div id="inviteErr" style="display:none;color:#ff5a5a;margin-top:10px"></div>
+          </div>
+        </div>
+      `;
+
+      const btn = document.getElementById("inviteBtn");
+      btn.addEventListener("pointerdown", () => btn.classList.add("pressed"));
+      const up = () => btn.classList.remove("pressed");
+      btn.addEventListener("pointerup", up);
+      btn.addEventListener("pointerleave", up);
+      btn.addEventListener("pointercancel", up);
+
+      btn.onclick = async () => {
+        const code = (document.getElementById("inviteCode").value || "").trim();
+        const err = document.getElementById("inviteErr");
+        err.style.display = "none";
+        err.textContent = "";
+
+        if (!code) {
+          err.style.display = "block";
+          err.textContent = "Введите код.";
+          return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = "Проверяем...";
+
+        try {
+          await api("/api/redeem", { code });
+          // автопереход в ЛК
+          window.location.href = "/?autologin=1";
+        } catch {
+          err.style.display = "block";
+          err.textContent = "Код неверный или уже использован.";
+        } finally {
+          btn.disabled = false;
+          btn.textContent = "Авторизоваться";
+        }
+      };
+      return;
+    }
+
+    document.body.innerHTML = `<div style="color:#fff;padding:30px;font-family:system-ui">Ошибка запуска. Перейдите в Telegram.</div>`;
     console.error(e);
   }
 }
