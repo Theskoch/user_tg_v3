@@ -51,16 +51,29 @@ function mustBeTelegram() {
 function showBlockingScreen(title, text, extraHtml = "") {
   document.body.innerHTML = `
     <style>
-      .btn { width:100%; padding:12px; border-radius:10px; border:none; background:#2a7fff; color:#fff; font-weight:700; }
-      .btn.secondary{ background:#2a2f3a; }
+      .btn { width:100%; padding:12px; border-radius:10px; border:none; background:#2a7fff; color:#fff; font-weight:800; }
+      .btn.secondary{ background:#2a2f3a; color:#fff; font-weight:700; }
+      .btn.danger{ background:#a83232; color:#fff; font-weight:800; }
       .pressed{ transform: scale(.98); filter: brightness(.95); }
       .err { color:#ff5a5a; margin-top:10px; font-size:14px; }
       .spin { display:inline-block; width:16px; height:16px; border:2px solid rgba(255,255,255,.35); border-top-color:#fff; border-radius:50%; animation: spin 0.8s linear infinite; vertical-align: -3px; }
       @keyframes spin { to { transform: rotate(360deg);} }
+
+      /* Admin tariff cards */
+      .tarGrid{display:grid;grid-template-columns:1fr;gap:10px;margin-top:10px}
+      .tarCard{background:#161b24;border:1px solid #2a2f3a;border-radius:14px;padding:12px;cursor:pointer}
+      .tarCard.active{border-color:#2a7fff;box-shadow:0 0 0 1px rgba(42,127,255,.35) inset}
+      .tarTop{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+      .tarName{font-weight:900;font-size:15px}
+      .tarPrice{font-weight:900;font-size:15px}
+      .tarMeta{opacity:.75;font-size:12px;margin-top:6px}
+      .tag{display:inline-block;font-size:11px;padding:3px 8px;border-radius:999px;background:#2a2f3a;color:#fff;opacity:.9}
+      .muted{opacity:.75;font-size:12px}
     </style>
+
     <div style="min-height:100vh;background:#0e1014;color:#fff;padding:20px;font-family:system-ui">
-      <div style="max-width:420px;margin:60px auto">
-        <div style="font-size:20px;font-weight:800;margin-bottom:10px">${escapeHtml(title)}</div>
+      <div style="max-width:440px;margin:50px auto">
+        <div style="font-size:20px;font-weight:900;margin-bottom:10px">${escapeHtml(title)}</div>
         <div style="opacity:.85;line-height:1.4;margin-bottom:14px">${escapeHtml(text)}</div>
         ${extraHtml}
       </div>
@@ -80,7 +93,7 @@ function formatRub(x) {
   return `${n.toFixed(2)} ₽`;
 }
 
-// ================== UI INIT (works without API) ==================
+// ================== UI INIT ==================
 function wireMenu() {
   const burger = el("burger");
   const dropdown = el("dropdown");
@@ -109,7 +122,29 @@ function showPage(name) {
   if (name === "topup") el("pageTopup")?.classList.add("page-active");
 }
 
-// ================== USER: invite screen ==================
+function wireTopupEntry() {
+  // кнопка в меню: "Пополнить"
+  const btnRefresh = el("btnRefresh");
+  if (btnRefresh) {
+    btnRefresh.textContent = "Пополнить";
+    addPressFx(btnRefresh);
+    btnRefresh.onclick = () => {
+      el("dropdown").style.display = "none";
+      showPage("topup");
+    };
+  }
+
+  // клик по балансу
+  const balanceBtn = el("balanceBtn");
+  if (balanceBtn) {
+    addPressFx(balanceBtn);
+    balanceBtn.onclick = () => showPage("topup");
+  }
+
+  el("backFromTopup")?.addEventListener("click", () => showPage("home"));
+}
+
+// ================== INVITE SCREEN ==================
 function showInviteScreen() {
   showBlockingScreen(
     "У вас отсутствует доступ.",
@@ -134,17 +169,15 @@ function showInviteScreen() {
       return;
     }
 
-    // spinner
     btn.disabled = true;
     btn.innerHTML = `<span class="spin"></span> Проверяем...`;
-
     err.style.display = "none";
     err.textContent = "";
 
     try {
       await api("/api/redeem", { code });
-      // успех: автопереход в ЛК без reload
-      await boot(); // перезапуск логики
+      // успех: автопереход (перезапуск)
+      await boot();
     } catch (e) {
       err.style.display = "block";
       err.textContent = "Код неверный или уже использован.";
@@ -155,31 +188,7 @@ function showInviteScreen() {
   };
 }
 
-// ================== USER: topup wiring ==================
-function wireTopupEntry() {
-  // 1) Кнопка в меню: "Пополнить" вместо "Обновить"
-  const btnRefresh = el("btnRefresh");
-  if (btnRefresh) {
-    btnRefresh.textContent = "Пополнить";
-    addPressFx(btnRefresh);
-    btnRefresh.onclick = () => {
-      el("dropdown").style.display = "none";
-      showPage("topup");
-    };
-  }
-
-  // 2) Клик по балансу должен вести на пополнение
-  const balanceBtn = el("balanceBtn");
-  if (balanceBtn) {
-    addPressFx(balanceBtn);
-    balanceBtn.onclick = () => showPage("topup");
-  }
-
-  // Back buttons (если есть)
-  el("backFromTopup")?.addEventListener("click", () => showPage("home"));
-}
-
-// ================== ADMIN: menu button ==================
+// ================== ADMIN ==================
 function addAdminButton() {
   const menu = document.querySelector(".dropdown");
   if (!menu) return;
@@ -193,8 +202,7 @@ function addAdminButton() {
   addPressFx(btn);
 
   btn.onclick = () => {
-    const dd = el("dropdown");
-    if (dd) dd.style.display = "none";
+    el("dropdown").style.display = "none";
     openAdminConsole().catch(err => {
       console.error(err);
       toast("Ошибка админки");
@@ -204,7 +212,6 @@ function addAdminButton() {
   menu.appendChild(btn);
 }
 
-// ================== ADMIN CONSOLE ==================
 let ADMIN_TARIFFS = [];
 let USERS_CACHE = [];
 let CURRENT_USER = null;
@@ -213,24 +220,15 @@ async function openAdminConsole() {
   USERS_CACHE = await api("/api/admin/users");
   ADMIN_TARIFFS = await api("/api/admin/tariffs");
 
-  showBlockingScreen("Админ-консоль", "Управление", `
-    <style>
-      .row{padding:10px 0;border-bottom:1px solid #2a2f3a;cursor:pointer}
-      .muted{opacity:.7;font-size:12px}
-      .btn{width:100%;padding:12px;border-radius:10px;border:none}
-      .btn.primary{background:#2a7fff;color:#fff;font-weight:700}
-      .btn.dark{background:#2a2f3a;color:#fff}
-      .pressed{transform:scale(.98);filter:brightness(.95)}
-    </style>
-
+  showBlockingScreen("Админ-консоль", "Управление пользователями", `
     <div style="display:flex;gap:10px;margin-bottom:12px">
-      <button id="invUser" class="btn dark" style="flex:1">+ User</button>
-      <button id="invAdmin" class="btn dark" style="flex:1">+ Admin</button>
+      <button id="invUser" class="btn secondary" style="flex:1">+ User</button>
+      <button id="invAdmin" class="btn secondary" style="flex:1">+ Admin</button>
     </div>
 
     <div id="usersList" style="border-top:1px solid #2a2f3a"></div>
 
-    <button id="backMain" class="btn primary" style="margin-top:14px">Назад</button>
+    <button id="backMain" class="btn" style="margin-top:14px">Назад</button>
   `);
 
   addPressFx(el("invUser"));
@@ -238,7 +236,6 @@ async function openAdminConsole() {
   addPressFx(el("backMain"));
 
   el("backMain").onclick = () => window.location.href = "/";
-
   el("invUser").onclick = () => createInvite("user");
   el("invAdmin").onclick = () => createInvite("admin");
 
@@ -248,9 +245,12 @@ async function openAdminConsole() {
 function renderUsersList() {
   const list = el("usersList");
   list.innerHTML = USERS_CACHE.map(u => `
-    <div class="row" data-id="${u.tg_user_id}">
-      <div style="font-weight:800">${escapeHtml(u.first_name || "")} <span class="muted">@${escapeHtml(u.username || "")}</span></div>
-      <div class="muted">${u.role} | ${u.balance_rub} ₽ | ${escapeHtml(u.tariff_name)}</div>
+    <div data-id="${u.tg_user_id}" style="padding:12px 0;border-bottom:1px solid #2a2f3a;cursor:pointer">
+      <div style="font-weight:900">${escapeHtml(u.first_name || "")}
+        <span class="muted">@${escapeHtml(u.username || "")}</span>
+        ${u.role === "admin" ? `<span class="tag" style="margin-left:8px">admin</span>` : ``}
+      </div>
+      <div class="muted">${u.balance_rub} ₽ • ${escapeHtml(u.tariff_name)} • активен: ${u.is_active ? "да" : "нет"}</div>
     </div>
   `).join("");
 
@@ -266,10 +266,16 @@ async function createInvite(role) {
   toast("Код скопирован");
 
   showBlockingScreen("Код приглашения", r.code, `
-    <button id="backAdmin" class="btn" style="background:#2a7fff;color:#fff;font-weight:800;margin-top:14px">Назад</button>
+    <button id="backAdmin" class="btn" style="margin-top:14px">Назад</button>
   `);
   addPressFx(el("backAdmin"));
   el("backAdmin").onclick = () => openAdminConsole();
+}
+
+function sameTariff(u, t) {
+  return (u.tariff_name === t.name &&
+          Number(u.tariff_price_rub) === Number(t.price_rub) &&
+          Number(u.tariff_period_months) === Number(t.months));
 }
 
 async function openUserEditor(targetTgId) {
@@ -277,57 +283,44 @@ async function openUserEditor(targetTgId) {
   CURRENT_USER = USERS_CACHE.find(x => x.tg_user_id === targetTgId);
   const cfgs = await api("/api/admin/configs/list", { target_tg_user_id: targetTgId });
 
+  let selectedTariffKey = null;
+
   const headerName = `${escapeHtml(CURRENT_USER.first_name || "")} @${escapeHtml(CURRENT_USER.username || "")}`;
   const headerBal = `${Number(CURRENT_USER.balance_rub).toFixed(2)} ₽`;
 
-  const tariffOptions = ADMIN_TARIFFS.map(t => {
-    const label = `${t.name} — ${t.months} мес — ${t.price_rub} ₽`;
-    // пытаемся "сматчить" по имени+цене+сроку
-    const selected = (CURRENT_USER.tariff_name === t.name && Number(CURRENT_USER.tariff_price_rub) === Number(t.price_rub) && Number(CURRENT_USER.tariff_period_months) === Number(t.months))
-      ? "selected" : "";
-    return `<option value="${escapeHtml(t.key)}" ${selected}>${escapeHtml(label)}</option>`;
-  }).join("");
-
   showBlockingScreen("Пользователь", "", `
-    <style>
-      .btn{width:100%;padding:12px;border-radius:10px;border:none}
-      .btn.primary{background:#2a7fff;color:#fff;font-weight:800}
-      .btn.dark{background:#2a2f3a;color:#fff}
-      .btn.danger{background:#a83232;color:#fff}
-      .pressed{transform:scale(.98);filter:brightness(.95)}
-      .muted{opacity:.75;font-size:12px}
-      .box{padding:10px 0;border-bottom:1px solid #2a2f3a}
-      input,select{width:100%;padding:10px;border-radius:8px;border:none;margin:8px 0}
-    </style>
-
-    <div style="margin-bottom:10px">
+    <div style="margin-bottom:12px">
       <div style="font-weight:900;font-size:18px">${headerName}</div>
       <div class="muted">Баланс: <span id="headerBal" style="font-weight:900">${headerBal}</span></div>
+      <div class="muted">Роль: <span class="tag">${escapeHtml(CURRENT_USER.role)}</span></div>
     </div>
 
-    <div class="box">
+    <div style="padding:12px 0;border-top:1px solid #2a2f3a;border-bottom:1px solid #2a2f3a">
       <div class="muted">Новый баланс</div>
-      <input id="bal" value="${CURRENT_USER.balance_rub}">
-      <button id="saveBal" class="btn dark">Сохранить баланс</button>
-      <div id="balErr" class="muted" style="color:#ff5a5a;display:none;margin-top:6px"></div>
+      <input id="bal" value="${CURRENT_USER.balance_rub}" style="width:100%;padding:10px;border-radius:8px;border:none;margin:8px 0">
+      <button id="saveBal" class="btn secondary">Сохранить баланс</button>
+      <div id="balErr" class="err" style="display:none"></div>
     </div>
 
-    <div class="box">
-      <div class="muted">Тариф (только админ)</div>
-      <select id="tarSelect">${tariffOptions}</select>
-      <button id="saveTar" class="btn dark">Сохранить тариф</button>
+    <div style="padding:12px 0;border-bottom:1px solid #2a2f3a">
+      <div style="font-weight:900;margin-bottom:6px">Тариф</div>
+      <div class="muted">Выберите тариф и нажмите “Сохранить”</div>
+      <div id="tariffsGrid" class="tarGrid"></div>
+      <button id="saveTar" class="btn secondary" style="margin-top:10px">Сохранить тариф</button>
+      <div id="tarErr" class="err" style="display:none"></div>
     </div>
 
-    <div class="box">
-      <div class="muted" style="margin-bottom:6px">Конфиги</div>
+    <div style="padding:12px 0;border-bottom:1px solid #2a2f3a">
+      <div style="font-weight:900;margin-bottom:6px">Конфиги</div>
       <div id="cfgList" style="border-top:1px solid #2a2f3a"></div>
-      <button id="addCfg" class="btn dark" style="margin-top:10px">Добавить конфиг</button>
+      <button id="addCfg" class="btn secondary" style="margin-top:10px">Добавить конфиг</button>
     </div>
 
     <button id="delUser" class="btn danger" style="margin-top:14px">Удалить учётку</button>
-    <button id="backAdmin" class="btn primary" style="margin-top:10px">Назад</button>
+    <button id="backAdmin" class="btn" style="margin-top:10px">Назад</button>
   `);
 
+  // Press FX
   addPressFx(el("saveBal"));
   addPressFx(el("saveTar"));
   addPressFx(el("addCfg"));
@@ -336,7 +329,45 @@ async function openUserEditor(targetTgId) {
 
   el("backAdmin").onclick = () => openAdminConsole();
 
-  // Save balance with spinner + update header
+  // Render tariff cards
+  function renderTariffCards() {
+    const grid = el("tariffsGrid");
+    grid.innerHTML = "";
+
+    ADMIN_TARIFFS.forEach(t => {
+      const card = document.createElement("div");
+      card.className = "tarCard";
+
+      const isCurrent = sameTariff(CURRENT_USER, t);
+      if (isCurrent && !selectedTariffKey) selectedTariffKey = t.key;
+      if (selectedTariffKey === t.key) card.classList.add("active");
+
+      card.innerHTML = `
+        <div class="tarTop">
+          <div>
+            <div class="tarName">${escapeHtml(t.name)}</div>
+            <div class="tarMeta">${t.months} мес • <span class="tag">${escapeHtml(t.key)}</span></div>
+          </div>
+          <div class="tarPrice">${t.price_rub} ₽</div>
+        </div>
+        <div class="tarMeta" style="margin-top:10px">
+          ${isCurrent ? `<span class="tag" style="background:#2a7fff">текущий</span>` : `<span class="tag">доступно</span>`}
+        </div>
+      `;
+
+      addPressFx(card);
+      card.addEventListener("click", () => {
+        selectedTariffKey = t.key;
+        renderTariffCards();
+      });
+
+      grid.appendChild(card);
+    });
+  }
+
+  renderTariffCards();
+
+  // Save balance
   el("saveBal").onclick = async () => {
     const b = el("saveBal");
     const err = el("balErr");
@@ -352,14 +383,11 @@ async function openUserEditor(targetTgId) {
 
     b.disabled = true;
     const oldText = b.textContent;
-    b.textContent = "Сохраняем...";
+    b.innerHTML = `<span class="spin"></span> Сохраняем...`;
 
     try {
       await api("/api/admin/user/set_balance", { target_tg_user_id: targetTgId, balance_rub: val });
-
-      // обновим header баланс сразу
       el("headerBal").textContent = `${val.toFixed(2)} ₽`;
-
       toast("Сохранено");
     } catch (e) {
       err.style.display = "block";
@@ -370,16 +398,25 @@ async function openUserEditor(targetTgId) {
     }
   };
 
-  // Save tariff from select
+  // Save tariff
   el("saveTar").onclick = async () => {
     const b = el("saveTar");
+    const err = el("tarErr");
+    err.style.display = "none";
+    err.textContent = "";
+
+    const t = ADMIN_TARIFFS.find(x => x.key === selectedTariffKey);
+    if (!t) {
+      err.style.display = "block";
+      err.textContent = "Выберите тариф.";
+      return;
+    }
+
     b.disabled = true;
     const oldText = b.textContent;
-    b.textContent = "Сохраняем...";
+    b.innerHTML = `<span class="spin"></span> Сохраняем...`;
 
     try {
-      const key = el("tarSelect").value;
-      const t = ADMIN_TARIFFS.find(x => x.key === key);
       await api("/api/admin/user/set_tariff", {
         target_tg_user_id: targetTgId,
         tariff_name: t.name,
@@ -387,7 +424,6 @@ async function openUserEditor(targetTgId) {
         tariff_period_months: t.months,
       });
       toast("Тариф обновлён");
-      // можно перерисовать пользователя, чтобы обновились подписи
       openUserEditor(targetTgId);
     } finally {
       b.disabled = false;
@@ -403,51 +439,46 @@ async function openUserEditor(targetTgId) {
     openAdminConsole();
   };
 
-  renderConfigs(cfgs, targetTgId);
-}
-
-function renderConfigs(cfgs, targetTgId) {
+  // Configs
   const cfgList = el("cfgList");
   cfgList.innerHTML = (cfgs || []).map(c => `
-    <div style="padding:10px 0;border-bottom:1px solid #2a2f3a">
-      <div style="font-weight:800">${escapeHtml(c.title)}</div>
-      <div style="opacity:.7;font-size:12px;word-break:break-all">${escapeHtml(c.config_text).slice(0, 120)}${c.config_text.length>120?"…":""}</div>
-      <div style="margin-top:6px;display:flex;gap:8px">
-        <button data-edit="${c.id}" class="btn dark" style="flex:1;padding:10px">Редактировать</button>
+    <div style="padding:12px 0;border-bottom:1px solid #2a2f3a">
+      <div style="font-weight:900">${escapeHtml(c.title)}</div>
+      <div class="muted" style="word-break:break-all;margin-top:6px">${escapeHtml(c.config_text).slice(0, 120)}${c.config_text.length>120?"…":""}</div>
+      <div style="margin-top:10px;display:flex;gap:10px">
+        <button data-edit="${c.id}" class="btn secondary" style="flex:1;padding:10px">Редактировать</button>
         <button data-del="${c.id}" class="btn danger" style="flex:1;padding:10px">Удалить</button>
       </div>
     </div>
   `).join("");
 
-  [...cfgList.querySelectorAll("[data-del]")].forEach(b => {
-    addPressFx(b);
-    b.addEventListener("click", async () => {
-      await api("/api/admin/configs/delete", { config_id: Number(b.getAttribute("data-del")) });
+  [...cfgList.querySelectorAll("[data-del]")].forEach(btn => {
+    addPressFx(btn);
+    btn.addEventListener("click", async () => {
+      await api("/api/admin/configs/delete", { config_id: Number(btn.getAttribute("data-del")) });
       toast("Удалено");
       openUserEditor(targetTgId);
     });
   });
 
-  [...cfgList.querySelectorAll("[data-edit]")].forEach(b => {
-    addPressFx(b);
-    b.addEventListener("click", async () => {
-      const id = Number(b.getAttribute("data-edit"));
+  [...cfgList.querySelectorAll("[data-edit]")].forEach(btn => {
+    addPressFx(btn);
+    btn.addEventListener("click", async () => {
+      const id = Number(btn.getAttribute("data-edit"));
       const c = cfgs.find(x => x.id === id);
       const title = prompt("Название", c.title);
       if (title === null) return;
       const text = prompt("Текст", c.config_text);
       if (text === null) return;
       const isActive = confirm("Сделать активным? (OK=да, Cancel=нет)") ? 1 : 0;
-
       await api("/api/admin/configs/update", { config_id: id, title, config_text: text, is_active: isActive });
       toast("Сохранено");
       openUserEditor(targetTgId);
     });
   });
 
-  const addBtn = el("addCfg");
-  addPressFx(addBtn);
-  addBtn.onclick = async () => {
+  addPressFx(el("addCfg"));
+  el("addCfg").onclick = async () => {
     const title = prompt("Название", "Config");
     if (title === null) return;
     const text = prompt("Текст");
@@ -469,18 +500,16 @@ async function boot() {
     const r = await api("/api/auth");
     const me = r.me;
 
-    // заполнить UI
-    el("balance") && (el("balance").textContent = formatRub(me.balance_rub));
+    // UI fill
+    if (el("balance")) el("balance").textContent = formatRub(me.balance_rub);
 
-    // тариф (показываем, но без смены юзером)
-    el("tariffName") && (el("tariffName").textContent = me.tariff?.name || "—");
-    el("tariffPrice") && (el("tariffPrice").textContent = `${me.tariff?.price_rub ?? 0} ₽ / ${me.tariff?.period_months ?? 1} мес`);
-    el("nextPay") && (el("nextPay").textContent = `Окончание: ${me.tariff?.expires_at || "—"}`);
+    if (el("tariffName")) el("tariffName").textContent = me.tariff?.name || "—";
+    if (el("tariffPrice")) el("tariffPrice").textContent = `${me.tariff?.price_rub ?? 0} ₽ / ${me.tariff?.period_months ?? 1} мес`;
+    if (el("nextPay")) el("nextPay").textContent = `Окончание: ${me.tariff?.expires_at || "—"}`;
 
-    // админка
     if (me.role === "admin") addAdminButton();
 
-    // список конфигов юзера на главной
+    // My configs list on main
     try {
       const myCfgs = await api("/api/my_configs");
       const list = el("vpnList");
@@ -526,7 +555,7 @@ async function boot() {
       console.warn("my_configs failed", e);
     }
 
-    // закрытие шита (если есть)
+    // sheet close/copy (if exists)
     el("sheetOverlay")?.addEventListener("click", () => {
       el("sheet")?.classList.remove("open");
       el("sheetOverlay")?.classList.remove("open");
@@ -549,5 +578,5 @@ async function boot() {
   }
 }
 
-// старт
+// start
 boot().catch(console.error);

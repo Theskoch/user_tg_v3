@@ -90,20 +90,22 @@ def api_auth():
 
 @app.post("/api/redeem")
 def api_redeem():
-    """
-    Неавторизованный пользователь вводит invite code -> создаём учётку.
-    """
     tg_user = get_tg_user_from_request()
     body = request.get_json(silent=True) or {}
     code = (body.get("code") or "").strip()
     if not code:
         abort(400)
 
-    redeem_invite(tg_user, code)
-    # теперь должен стать allowed
+    try:
+        redeem_invite(tg_user, code)
+    except KeyError:
+        # неверный/использованный/неактивный инвайт
+        abort(400)
+    except ValueError:
+        abort(400)
+
+    # успех: возвращаем me чтобы фронт мог сразу войти
     tg_id = int(tg_user["id"])
-    if not is_user_allowed(tg_id):
-        abort(403)
     upsert_user_from_tg(tg_user)
     payload = get_user_payload(tg_id)
     return jsonify({"ok": True, "me": payload})
