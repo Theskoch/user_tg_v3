@@ -6,14 +6,20 @@ import hashlib
 from urllib.parse import parse_qsl
 
 from config import TG_BOT_TOKEN
-from db import init_db, create_zero_user, upsert_user_from_tg, is_user_allowed, get_user_payload
+from db import (
+    init_db, create_zero_user,
+    get_user_by_tg_id, is_user_allowed, is_admin,
+    upsert_user_from_tg, get_user_payload,
+    redeem_invite, create_invite,
+    admin_list_users, admin_set_balance, admin_set_tariff, admin_delete_user,
+    admin_list_configs, admin_add_config, admin_update_config, admin_delete_config,
+)
 
 BASE_DIR = Path(__file__).resolve().parent
 FRONTEND_DIR = (BASE_DIR.parent / "frontend").resolve()
 
 app = Flask(__name__)
 
-# --- no cache: чтобы Telegram не держал старые файлы ---
 @app.after_request
 def add_no_cache(resp):
     resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
@@ -22,26 +28,20 @@ def add_no_cache(resp):
     return resp
 
 def check_init_data(init_data: str) -> dict:
-    """
-    Проверка подписи Telegram WebApp initData.
-    Возвращает dict параметров (user будет JSON-строкой).
-    """
     if not TG_BOT_TOKEN:
-        raise RuntimeError("TG_BOT_TOKEN is not set in environment")
+        raise RuntimeError("TG_BOT_TOKEN is not set")
 
     data = dict(parse_qsl(init_data, keep_blank_values=True))
     received_hash = data.pop("hash", None)
     if not received_hash:
-        raise ValueError("No hash in initData")
+        raise ValueError("No hash")
 
     check_string = "\n".join(f"{k}={data[k]}" for k in sorted(data.keys()))
-
     secret_key = hmac.new(b"WebAppData", TG_BOT_TOKEN.encode(), hashlib.sha256).digest()
     calculated_hash = hmac.new(secret_key, check_string.encode(), hashlib.sha256).hexdigest()
 
     if not hmac.compare_digest(calculated_hash, received_hash):
         raise ValueError("Bad hash")
-
     return data
 
 def get_tg_user_from_request() -> dict:
@@ -60,80 +60,178 @@ def get_tg_user_from_request() -> dict:
     except Exception:
         abort(401)
 
+def require_admin(tg_user_id: int):
+    if not is_admin(tg_user_id):
+        abort(403)
+
 # ---------- AUTH ----------
 @app.post("/api/auth")
 def api_auth():
+    """
+    Если пользователь уже есть в БД и активен — OK.
+    Если нет — возвращаем 403 (UI покажет ввод инвайт-кода).
+    """
     tg_user = get_tg_user_from_request()
-    tg_user_id = int(tg_user["id"])
+    tg_id = int(tg_user["id"])
 
-    # Доступ только тем, кто есть в БД и активен
-    if not is_user_allowed(tg_user_id):
+    if not is_user_allowed(tg_id):
         abort(403)
 
-    # Обновим имя/юзернейм в БД (upsert), но НЕ создаём новых “проходных” пользователей
+    # обновляем профильные поля
     upsert_user_from_tg(tg_user)
+    payload = get_user_payload(tg_id)
+    return jsonify({"ok": True, "me": payload})
 
-    return jsonify({"ok": True, "user": tg_user})
-
-# ---------- API ----------
-@app.post("/api/user")
-def api_user():
+@app.post("/api/redeem")
+def api_redeem():
+    """
+    Неавторизованный пользователь вводит invite code -> создаём учётку.
+    """
     tg_user = get_tg_user_from_request()
-    tg_user_id = int(tg_user["id"])
+    body = request.get_json(silent=True) or {}
+    code = (body.get("code") or "").strip()
+    if not code:
+        abort(400)
 
-    if not is_user_allowed(tg_user_id):
+    redeem_invite(tg_user, code)
+    # теперь должен стать allowed
+    tg_id = int(tg_user["id"])
+    if not is_user_allowed(tg_id):
         abort(403)
-
-    # Здесь уже можно создавать запись, если хочешь автосоздание.
-    # Сейчас делаем upsert только для тех, кто уже разрешён.
     upsert_user_from_tg(tg_user)
+    payload = get_user_payload(tg_id)
+    return jsonify({"ok": True, "me": payload})
 
-    return jsonify(get_user_payload(tg_user_id))
-
-@app.post("/api/vpn")
-def api_vpn():
+# ---------- USER API ----------
+@app.post("/api/me")
+def api_me():
     tg_user = get_tg_user_from_request()
-    tg_user_id = int(tg_user["id"])
-    if not is_user_allowed(tg_user_id):
+    tg_id = int(tg_user["id"])
+    if not is_user_allowed(tg_id):
+        abort(403)
+    upsert_user_from_tg(tg_user)
+    return jsonify(get_user_payload(tg_id))
+
+@app.post("/api/my_configs")
+def api_my_configs():
+    """
+    Пользователь видит только свои конфиги (редактирование только у админа).
+    """
+    tg_user = get_tg_user_from_request()
+    tg_id = int(tg_user["id"])
+    if not is_user_allowed(tg_id):
         abort(403)
 
-    # Заглушки подключений
-    return jsonify([
-        {
-            "id": "de1",
-            "name": "Germany #1",
-            "status": "online",
-            "expires": "2026-03-01",
-            "config": "vless://TEST-UUID@de1.example.com:443?encryption=none&security=tls&type=ws#Germany%20%231"
-        },
-        {
-            "id": "nl2",
-            "name": "Netherlands #2",
-            "status": "offline",
-            "expires": "2026-02-15",
-            "config": "vless://TEST-UUID@nl2.example.com:443?encryption=none&security=tls&type=ws#Netherlands%20%232"
-        },
-        {
-            "id": "fi1",
-            "name": "Finland #1",
-            "status": "online",
-            "expires": "2026-04-10",
-            "config": "vless://TEST-UUID@fi1.example.com:443?encryption=none&security=tls&type=ws#Finland%20%231"
-        }
-    ])
+    # выдаём конфиги из vpn_configs по tg_id (через admin_list_configs переиспользуем)
+    # (это админ-функция, но чтение для себя ок)
+    return jsonify(admin_list_configs(tg_id))
 
-@app.post("/api/tariffs")
-def api_tariffs():
+# ---------- ADMIN ----------
+@app.post("/api/admin/invite")
+def api_admin_invite():
     tg_user = get_tg_user_from_request()
-    tg_user_id = int(tg_user["id"])
-    if not is_user_allowed(tg_user_id):
-        abort(403)
+    tg_id = int(tg_user["id"])
+    require_admin(tg_id)
 
-    return jsonify([
-        {"months": 1, "price_rub": 150},
-        {"months": 6, "price_rub": 700},
-        {"months": 12, "price_rub": 1200},
-    ])
+    body = request.get_json(silent=True) or {}
+    role = (body.get("role") or "user").strip()
+    code = create_invite(tg_id, role)
+    return jsonify({"ok": True, "code": code, "role": role})
+
+@app.post("/api/admin/users")
+def api_admin_users():
+    tg_user = get_tg_user_from_request()
+    tg_id = int(tg_user["id"])
+    require_admin(tg_id)
+    return jsonify(admin_list_users())
+
+@app.post("/api/admin/user/set_balance")
+def api_admin_set_balance():
+    tg_user = get_tg_user_from_request()
+    tg_id = int(tg_user["id"])
+    require_admin(tg_id)
+
+    body = request.get_json(silent=True) or {}
+    target = int(body.get("target_tg_user_id"))
+    balance = float(body.get("balance_rub"))
+    admin_set_balance(target, balance)
+    return jsonify({"ok": True})
+
+@app.post("/api/admin/user/set_tariff")
+def api_admin_set_tariff():
+    tg_user = get_tg_user_from_request()
+    tg_id = int(tg_user["id"])
+    require_admin(tg_id)
+
+    body = request.get_json(silent=True) or {}
+    target = int(body.get("target_tg_user_id"))
+    name = str(body.get("tariff_name") or "Basic")
+    price = int(body.get("tariff_price_rub") or 150)
+    period = int(body.get("tariff_period_months") or 1)
+
+    admin_set_tariff(target, name, price, period)
+    return jsonify({"ok": True})
+
+@app.post("/api/admin/user/delete")
+def api_admin_delete_user():
+    tg_user = get_tg_user_from_request()
+    tg_id = int(tg_user["id"])
+    require_admin(tg_id)
+
+    body = request.get_json(silent=True) or {}
+    target = int(body.get("target_tg_user_id"))
+    admin_delete_user(target)
+    return jsonify({"ok": True})
+
+@app.post("/api/admin/configs/list")
+def api_admin_configs_list():
+    tg_user = get_tg_user_from_request()
+    tg_id = int(tg_user["id"])
+    require_admin(tg_id)
+
+    body = request.get_json(silent=True) or {}
+    target = int(body.get("target_tg_user_id"))
+    return jsonify(admin_list_configs(target))
+
+@app.post("/api/admin/configs/add")
+def api_admin_configs_add():
+    tg_user = get_tg_user_from_request()
+    tg_id = int(tg_user["id"])
+    require_admin(tg_id)
+
+    body = request.get_json(silent=True) or {}
+    target = int(body.get("target_tg_user_id"))
+    title = str(body.get("title") or "Config")
+    config_text = str(body.get("config_text") or "")
+    if not config_text.strip():
+        abort(400)
+    admin_add_config(target, title, config_text)
+    return jsonify({"ok": True})
+
+@app.post("/api/admin/configs/update")
+def api_admin_configs_update():
+    tg_user = get_tg_user_from_request()
+    tg_id = int(tg_user["id"])
+    require_admin(tg_id)
+
+    body = request.get_json(silent=True) or {}
+    config_id = int(body.get("config_id"))
+    title = str(body.get("title") or "Config")
+    config_text = str(body.get("config_text") or "")
+    is_active = int(body.get("is_active") or 1)
+    admin_update_config(config_id, title, config_text, is_active)
+    return jsonify({"ok": True})
+
+@app.post("/api/admin/configs/delete")
+def api_admin_configs_delete():
+    tg_user = get_tg_user_from_request()
+    tg_id = int(tg_user["id"])
+    require_admin(tg_id)
+
+    body = request.get_json(silent=True) or {}
+    config_id = int(body.get("config_id"))
+    admin_delete_config(config_id)
+    return jsonify({"ok": True})
 
 # ---------- Frontend ----------
 @app.get("/")
