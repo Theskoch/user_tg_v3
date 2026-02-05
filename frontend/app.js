@@ -1,8 +1,6 @@
-// ================== TELEGRAM ==================
 const tg = window.Telegram?.WebApp;
 if (tg) { tg.ready(); tg.expand(); }
 
-// ================== HELPERS ==================
 const el = (id) => document.getElementById(id);
 
 function escapeHtml(s) {
@@ -43,16 +41,15 @@ async function api(path, payload = {}) {
 
 function mustBeTelegram() {
   if (!tg || !tg.initData) {
-    document.body.innerHTML = `<div style="color:#fff;padding:30px;font-family:system-ui">Ошибка запуска. Перейдите в Telegram.</div>`;
-    throw new Error("Not in Telegram");
+    document.body.innerHTML = `<div style="padding:24px;color:#fff;font-family:system-ui">Откройте приложение в Telegram.</div>`;
+    throw new Error("Not Telegram");
   }
 }
 
 function setAvatarLetter() {
   const user = tg?.initDataUnsafe?.user;
   const letter = (user?.first_name?.trim()?.[0] || "U").toUpperCase();
-  const a = el("avatar");
-  if (a) a.textContent = letter;
+  el("avatar").textContent = letter;
 }
 
 function formatRub(x) {
@@ -60,23 +57,21 @@ function formatRub(x) {
   return `${n.toFixed(2)} ₽`;
 }
 
-// ================== PAGES ==================
+// ================== Pages ==================
 function showPage(name) {
-  const ids = ["pageHome", "pageTopup", "pageAdmin", "pageAdminConfigs"];
+  const ids = ["pageHome","pageTopup","pageAdmin","pageAdminUser","pageAdminConfigs"];
   ids.forEach(id => el(id)?.classList.remove("page-active"));
-
   if (name === "home") el("pageHome")?.classList.add("page-active");
   if (name === "topup") el("pageTopup")?.classList.add("page-active");
   if (name === "admin") el("pageAdmin")?.classList.add("page-active");
+  if (name === "adminUser") el("pageAdminUser")?.classList.add("page-active");
   if (name === "adminConfigs") el("pageAdminConfigs")?.classList.add("page-active");
 }
 
-// ================== MENU ==================
+// ================== Menu ==================
 function wireMenu() {
   const burger = el("burger");
   const dropdown = el("dropdown");
-  if (!burger || !dropdown) return;
-
   addPressFx(burger);
 
   burger.addEventListener("click", (e) => {
@@ -91,81 +86,72 @@ function wireMenu() {
 }
 
 function wireTopup() {
-  const btn = el("btnRefresh");
-  const balanceBtn = el("balanceBtn");
+  addPressFx(el("btnRefresh"));
+  el("btnRefresh").onclick = () => {
+    el("dropdown").style.display = "none";
+    showPage("topup");
+  };
 
-  if (btn) {
-    addPressFx(btn);
-    btn.textContent = "Пополнить";
-    btn.onclick = () => {
-      el("dropdown").style.display = "none";
-      showPage("topup");
-    };
-  }
+  addPressFx(el("balanceBtn"));
+  el("balanceBtn").onclick = () => showPage("topup");
 
-  if (balanceBtn) {
-    addPressFx(balanceBtn);
-    balanceBtn.onclick = () => showPage("topup");
-  }
-
-  el("backFromTopup") && (el("backFromTopup").onclick = () => showPage("home"));
+  addPressFx(el("backFromTopup"));
+  el("backFromTopup").onclick = () => showPage("home");
 }
 
-// ================== SHEET ==================
+// ================== Sheet ==================
 function openSheet(title, configText) {
-  const sheet = el("sheet");
-  const overlay = el("sheetOverlay");
-  const sheetTitle = el("sheetTitle");
-  const textEl = el("configText");
+  el("sheetTitle").textContent = title || "Конфиг";
+  el("configText").textContent = configText || "";
+
   const qrWrap = el("qr");
-
-  if (sheetTitle) sheetTitle.textContent = title || "Конфиг";
-  if (textEl) textEl.textContent = configText || "";
-
-  // QR render if QRCode library exists
   if (qrWrap) {
     qrWrap.innerHTML = "";
+    // если подключена QRCode — рисуем
     if (window.QRCode && configText) {
       new QRCode(qrWrap, { text: configText, width: 180, height: 180 });
     }
   }
 
-  sheet?.classList.add("open");
-  overlay?.classList.add("open");
+  el("sheet").classList.add("open");
+  el("sheetOverlay").classList.add("open");
 }
 
 function wireSheet() {
-  const overlay = el("sheetOverlay");
-  const closeBtn = el("sheetClose");
-  const box = el("configBox");
+  el("sheetOverlay").onclick = () => {
+    el("sheet").classList.remove("open");
+    el("sheetOverlay").classList.remove("open");
+  };
 
-  if (overlay) overlay.onclick = () => { el("sheet")?.classList.remove("open"); overlay.classList.remove("open"); };
-  if (closeBtn) {
-    addPressFx(closeBtn);
-    closeBtn.onclick = () => { el("sheet")?.classList.remove("open"); el("sheetOverlay")?.classList.remove("open"); };
-  }
-  if (box) {
-    box.onclick = async () => {
-      const text = el("configText")?.textContent || "";
-      if (!text.trim()) return;
-      try { await navigator.clipboard.writeText(text); toast("Скопировано"); } catch {}
-    };
-  }
+  addPressFx(el("sheetClose"));
+  el("sheetClose").onclick = () => {
+    el("sheet").classList.remove("open");
+    el("sheetOverlay").classList.remove("open");
+  };
+
+  el("configBox").onclick = async () => {
+    const text = el("configText").textContent || "";
+    if (!text.trim()) return;
+    try { await navigator.clipboard.writeText(text); toast("Скопировано"); } catch {}
+  };
 }
 
-// ================== USER LIST ==================
+// ================== User configs ==================
 function renderUserConfigs(cfgs) {
-  const list = el("vpnList");
-  if (!list) return;
+  const box = el("vpnList");
+  box.innerHTML = "";
 
-  list.innerHTML = "";
+  if (!cfgs || cfgs.length === 0) {
+    box.innerHTML = `<div class="muted">Пока нет подключений</div>`;
+    return;
+  }
 
-  (cfgs || []).forEach(c => {
+  cfgs.forEach(c => {
     const inactive = !c.is_active;
 
     const node = document.createElement("div");
     node.className = "item";
-    node.style.opacity = inactive ? "0.45" : "1";
+    if (inactive) node.style.opacity = "0.55";
 
     node.innerHTML = `
       <div class="itemTop">
@@ -175,9 +161,8 @@ function renderUserConfigs(cfgs) {
         </div>
         <div class="tag">${inactive ? "off" : "on"}</div>
       </div>
-
       <div class="btnRow">
-        <button class="bigBtn ${inactive ? "ghost" : "primary"}" style="flex:1" ${inactive ? "disabled" : ""}>Открыть</button>
+        <button class="btn ${inactive ? "ghost" : "primary"}" style="flex:1" ${inactive ? "disabled" : ""}>Открыть</button>
       </div>
     `;
 
@@ -188,26 +173,23 @@ function renderUserConfigs(cfgs) {
       openSheet(c.title, c.config_text);
     };
 
-    list.appendChild(node);
+    box.appendChild(node);
   });
-
-  if ((cfgs || []).length === 0) {
-    list.innerHTML = `<div class="skeleton">Пока нет подключений</div>`;
-  }
 }
 
-// ================== ADMIN ==================
-let IS_ADMIN = false;
+// ================== Admin state ==================
+let ME = null;
 let ADMIN_SELECTED_USER_ID = null;
+let ADMIN_SELECTED_USER = null;
 
-function addAdminMenuButton() {
-  const menu = el("dropdown");
-  if (!menu) return;
+// add admin button into dropdown (with gap)
+function ensureAdminMenuButton() {
+  const dropdown = el("dropdown");
   if (el("adminMenuBtn")) return;
 
   const spacer = document.createElement("div");
   spacer.style.height = "8px";
-  menu.appendChild(spacer);
+  dropdown.appendChild(spacer);
 
   const btn = document.createElement("button");
   btn.id = "adminMenuBtn";
@@ -222,13 +204,15 @@ function addAdminMenuButton() {
     showPage("admin");
   };
 
-  menu.appendChild(btn);
+  dropdown.appendChild(btn);
 }
 
+// ================== Admin pages ==================
 async function openAdminPage() {
+  addPressFx(el("adminBackHome"));
   el("adminBackHome").onclick = () => showPage("home");
 
-  // invite buttons
+  // invites
   addPressFx(el("invUser"));
   addPressFx(el("invAdmin"));
 
@@ -250,13 +234,17 @@ async function openAdminPage() {
 
 function renderAdminUsers(users) {
   const box = el("adminUsersList");
-  if (!box) return;
-
   box.innerHTML = "";
+
+  if (!users || users.length === 0) {
+    box.innerHTML = `<div class="muted">Пользователей нет</div>`;
+    return;
+  }
 
   users.forEach(u => {
     const node = document.createElement("div");
     node.className = "item";
+
     node.innerHTML = `
       <div class="itemTop">
         <div>
@@ -264,12 +252,13 @@ function renderAdminUsers(users) {
             ${escapeHtml(u.first_name || "")}
             <span style="opacity:.7">@${escapeHtml(u.username || "")}</span>
           </div>
-          <div class="itemSub">${u.balance_rub} ₽ • ${escapeHtml(u.tariff_name)} • ${u.role}</div>
+          <div class="itemSub">${u.balance_rub} ₽ • ${escapeHtml(u.tariff_name)} • ${escapeHtml(u.role)}</div>
         </div>
-        <div class="tag">${u.role}</div>
+        <div class="tag">${escapeHtml(u.role)}</div>
       </div>
+
       <div class="btnRow">
-        <button class="bigBtn primary" style="flex:1">Конфиги</button>
+        <button class="btn primary" style="flex:1">Открыть</button>
       </div>
     `;
 
@@ -277,61 +266,132 @@ function renderAdminUsers(users) {
     addPressFx(btn);
     btn.onclick = async () => {
       ADMIN_SELECTED_USER_ID = Number(u.tg_user_id);
-      await openAdminConfigsPage(ADMIN_SELECTED_USER_ID, u);
-      showPage("adminConfigs");
+      ADMIN_SELECTED_USER = u;
+      await openAdminUserPage(u);
+      showPage("adminUser");
     };
 
     box.appendChild(node);
   });
-
-  if ((users || []).length === 0) {
-    box.innerHTML = `<div class="skeleton">Пользователей нет</div>`;
-  }
 }
 
-// ================== ADMIN CONFIGS PAGE ==================
-async function openAdminConfigsPage(targetTgId, userObj = null) {
-  el("configsBackAdmin").onclick = () => showPage("admin");
+async function openAdminUserPage(u) {
+  addPressFx(el("adminUserBack"));
+  el("adminUserBack").onclick = () => showPage("admin");
 
-  const title = userObj
-    ? `Конфиги: ${userObj.first_name || ""}`
-    : `Конфиги`;
+  el("adminUserTitle").textContent =
+    `${u.first_name || "Пользователь"} @${u.username || ""}`;
 
-  el("configsTitle").textContent = title;
+  // show current balance
+  el("adminUserBalanceNow").textContent = `${Number(u.balance_rub).toFixed(2)} ₽`;
+  el("adminUserBalanceInput").value = String(u.balance_rub ?? "");
 
-  // composer controls
-  el("cfgErr").style.display = "none";
-  el("cfgComposer").style.display = "none";
-  el("cfgText").value = "";
+  el("adminBalanceErr").style.display = "none";
+  el("adminBalanceErr").textContent = "";
 
-  addPressFx(el("cfgAddBtn"));
-  addPressFx(el("cfgCloseComposerBtn"));
-  addPressFx(el("scanQrBtn"));
-  addPressFx(el("saveCfgBtn"));
+  // save balance
+  addPressFx(el("adminSaveBalance"));
+  el("adminSaveBalance").onclick = async () => {
+    const err = el("adminBalanceErr");
+    err.style.display = "none";
+    err.textContent = "";
 
-  el("cfgAddBtn").onclick = () => { el("cfgComposer").style.display = "block"; };
-  el("cfgCloseComposerBtn").onclick = () => { el("cfgComposer").style.display = "none"; };
-
-  el("scanQrBtn").onclick = async () => {
-    const scanned = await openQrScanner();
-    if (scanned) el("cfgText").value = scanned;
-  };
-
-  el("saveCfgBtn").onclick = async () => {
-    const txt = (el("cfgText").value || "").trim();
-    if (!txt) {
-      el("cfgErr").style.display = "block";
-      el("cfgErr").textContent = "Текст подключения пустой.";
+    const val = Number(el("adminUserBalanceInput").value);
+    if (Number.isNaN(val)) {
+      err.style.display = "block";
+      err.textContent = "Баланс должен быть числом.";
       return;
     }
 
-    el("cfgErr").style.display = "none";
+    const btn = el("adminSaveBalance");
+    const old = btn.textContent;
+    btn.textContent = "Сохраняем...";
+    btn.disabled = true;
+
+    try {
+      await api("/api/admin/user/set_balance", {
+        target_tg_user_id: ADMIN_SELECTED_USER_ID,
+        balance_rub: val
+      });
+
+      // обновим верхнее значение
+      el("adminUserBalanceNow").textContent = `${val.toFixed(2)} ₽`;
+
+      // и обновим кеш + список пользователей, чтобы в админке тоже обновилось
+      ADMIN_SELECTED_USER.balance_rub = val;
+      toast("Сохранено");
+    } catch {
+      err.style.display = "block";
+      err.textContent = "Ошибка сохранения.";
+    } finally {
+      btn.textContent = old;
+      btn.disabled = false;
+    }
+  };
+
+  // configs
+  addPressFx(el("adminOpenConfigs"));
+  el("adminOpenConfigs").onclick = async () => {
+    await openAdminConfigsPage(ADMIN_SELECTED_USER_ID, ADMIN_SELECTED_USER);
+    showPage("adminConfigs");
+  };
+
+  // delete user
+  addPressFx(el("adminDeleteUser"));
+  el("adminDeleteUser").onclick = async () => {
+    if (!confirm("Удалить пользователя?")) return;
+    await api("/api/admin/user/delete", { target_tg_user_id: ADMIN_SELECTED_USER_ID });
+    toast("Удалено");
+    await openAdminPage();
+    showPage("admin");
+  };
+}
+
+// ================== Admin configs ==================
+async function openAdminConfigsPage(targetTgId, userObj) {
+  addPressFx(el("configsBack"));
+  el("configsBack").onclick = () => showPage("adminUser");
+
+  el("configsTitle").textContent =
+    `Конфиги: ${userObj?.first_name || ""}`;
+
+  // composer
+  el("cfgComposer").style.display = "none";
+  el("cfgErr").style.display = "none";
+  el("cfgText").value = "";
+
+  addPressFx(el("cfgToggleComposer"));
+  el("cfgToggleComposer").onclick = () => {
+    const v = el("cfgComposer").style.display;
+    el("cfgComposer").style.display = (v === "none" || !v) ? "block" : "none";
+  };
+
+  addPressFx(el("scanQrBtn"));
+  el("scanQrBtn").onclick = async () => {
+    const s = await openQrScanner();
+    if (s) el("cfgText").value = s;
+  };
+
+  addPressFx(el("saveCfgBtn"));
+  el("saveCfgBtn").onclick = async () => {
+    const err = el("cfgErr");
+    err.style.display = "none";
+    err.textContent = "";
+
+    const txt = (el("cfgText").value || "").trim();
+    if (!txt) {
+      err.style.display = "block";
+      err.textContent = "Текст подключения пустой.";
+      return;
+    }
+
     await api("/api/admin/configs/add", {
       target_tg_user_id: targetTgId,
       title: "Config",
       config_text: txt
     });
     toast("Добавлено");
+
     el("cfgText").value = "";
     el("cfgComposer").style.display = "none";
 
@@ -345,16 +405,19 @@ async function openAdminConfigsPage(targetTgId, userObj = null) {
 
 function renderAdminConfigsList(targetTgId, cfgs) {
   const box = el("adminConfigsList");
-  if (!box) return;
-
   box.innerHTML = "";
 
-  (cfgs || []).forEach(c => {
+  if (!cfgs || cfgs.length === 0) {
+    box.innerHTML = `<div class="muted">Конфигов нет</div>`;
+    return;
+  }
+
+  cfgs.forEach(c => {
     const inactive = !c.is_active;
 
     const node = document.createElement("div");
     node.className = "item";
-    node.style.opacity = inactive ? "0.55" : "1";
+    if (inactive) node.style.opacity = "0.55";
 
     node.innerHTML = `
       <div class="itemTop">
@@ -366,21 +429,21 @@ function renderAdminConfigsList(targetTgId, cfgs) {
       </div>
 
       <div class="btnRow">
-        <button class="bigBtn primary" data-open="${c.id}" style="flex:1">Открыть</button>
-        <button class="bigBtn" data-toggle="${c.id}" style="flex:1">${inactive ? "Разблок." : "Блокировать"}</button>
-        <button class="bigBtn danger" data-del="${c.id}" style="flex:1">Удалить</button>
+        <button class="btn primary" data-open="1" style="flex:1">Открыть</button>
+        <button class="btn" data-toggle="1" style="flex:1">${inactive ? "Разблок." : "Блокировать"}</button>
+        <button class="btn danger" data-del="1" style="flex:1">Удалить</button>
       </div>
     `;
 
-    // open: админ может открыть всегда, даже если blocked
-    const btnOpen = node.querySelector(`[data-open="${c.id}"]`);
-    addPressFx(btnOpen);
-    btnOpen.onclick = () => openSheet(c.title, c.config_text);
+    // open: админ всегда может открыть
+    const bOpen = node.querySelector('[data-open="1"]');
+    addPressFx(bOpen);
+    bOpen.onclick = () => openSheet(c.title, c.config_text);
 
-    // block/unblock: реально меняем is_active
-    const btnToggle = node.querySelector(`[data-toggle="${c.id}"]`);
-    addPressFx(btnToggle);
-    btnToggle.onclick = async () => {
+    // toggle: ВАЖНО — отправляем title+config_text+is_active (как ты делал ранее)
+    const bToggle = node.querySelector('[data-toggle="1"]');
+    addPressFx(bToggle);
+    bToggle.onclick = async () => {
       await api("/api/admin/configs/update", {
         config_id: c.id,
         title: c.title,
@@ -388,14 +451,18 @@ function renderAdminConfigsList(targetTgId, cfgs) {
         is_active: c.is_active ? 0 : 1
       });
       toast(c.is_active ? "Заблокировано" : "Разблокировано");
+
+      // перерисовать список
       const cfgs2 = await api("/api/admin/configs/list", { target_tg_user_id: targetTgId });
       renderAdminConfigsList(targetTgId, cfgs2);
+
+      // и обновить на главной у юзера при следующем открытии — backend уже отдаст is_active=0
     };
 
     // delete with confirm
-    const btnDel = node.querySelector(`[data-del="${c.id}"]`);
-    addPressFx(btnDel);
-    btnDel.onclick = async () => {
+    const bDel = node.querySelector('[data-del="1"]');
+    addPressFx(bDel);
+    bDel.onclick = async () => {
       if (!confirm(`Удалить конфиг "${c.title}"?`)) return;
       await api("/api/admin/configs/delete", { config_id: c.id });
       toast("Удалено");
@@ -405,40 +472,27 @@ function renderAdminConfigsList(targetTgId, cfgs) {
 
     box.appendChild(node);
   });
-
-  if ((cfgs || []).length === 0) {
-    box.innerHTML = `<div class="skeleton">Конфигов пока нет</div>`;
-  }
 }
 
-// ================== QR SCANNER ==================
+// ================== QR Scanner ==================
 async function openQrScanner() {
-  if (!navigator.mediaDevices?.getUserMedia) {
-    toast("Камера недоступна");
-    return null;
-  }
-  if (!window.jsQR) {
-    toast("jsQR не загрузился");
-    return null;
-  }
+  if (!navigator.mediaDevices?.getUserMedia) { toast("Камера недоступна"); return null; }
+  if (!window.jsQR) { toast("jsQR не загрузился"); return null; }
 
-  // modal
   const modal = document.createElement("div");
   modal.className = "qrModal";
-
   modal.innerHTML = `
     <div class="qrBox">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
-        <div style="font-weight:900;font-size:16px">Сканер QR</div>
-        <button id="qrClose" class="bigBtn ghost" style="min-height:44px;padding:10px 12px;border-radius:14px;font-size:14px">Закрыть</button>
+      <div class="row">
+        <div style="font-weight:900">Сканер QR</div>
+        <button id="qrClose" class="btn ghost" type="button" style="min-height:36px;padding:6px 10px">Закрыть</button>
       </div>
       <div class="muted" style="margin-top:6px">Наведи камеру на QR</div>
       <video id="qrVideo" class="qrVideo" playsinline></video>
       <canvas id="qrCanvas" style="display:none"></canvas>
-      <div id="qrHint" class="muted" style="margin-top:10px">Ожидание...</div>
+      <div id="qrHint" class="muted" style="margin-top:10px">Ожидание…</div>
     </div>
   `;
-
   document.body.appendChild(modal);
 
   const closeBtn = modal.querySelector("#qrClose");
@@ -473,7 +527,7 @@ async function openQrScanner() {
       });
       video.srcObject = stream;
       await video.play();
-    } catch (e) {
+    } catch {
       hint.textContent = "Нет доступа к камере.";
       return;
     }
@@ -484,8 +538,8 @@ async function openQrScanner() {
         canvas.height = video.videoHeight;
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const code = window.jsQR(img.data, img.width, img.height, { inversionAttempts: "dontInvert" });
 
+        const code = window.jsQR(img.data, img.width, img.height, { inversionAttempts: "dontInvert" });
         if (code?.data) {
           hint.textContent = "Считано!";
           const data = code.data;
@@ -500,96 +554,86 @@ async function openQrScanner() {
   });
 }
 
-// ================== BOOT ==================
+// ================== Invite fallback ==================
+function showInviteScreen() {
+  document.body.innerHTML = `
+    <div style="min-height:100vh;background:#0e1014;color:#fff;padding:22px;font-family:system-ui">
+      <div style="max-width:420px;margin:70px auto">
+        <div style="font-weight:900;font-size:20px;margin-bottom:10px">Доступ отсутствует</div>
+        <div style="opacity:.8;margin-bottom:12px">если есть код — введи его:</div>
+        <input id="inviteCode" style="width:100%;padding:12px;border-radius:12px;border:1px solid #2a2f3a;background:#161b24;color:#fff;font-size:14px" placeholder="Код">
+        <button id="inviteBtn" style="width:100%;margin-top:12px;min-height:42px;border-radius:12px;border:none;background:#2a7fff;color:#fff;font-weight:900;font-size:14px">Авторизоваться</button>
+        <div id="inviteErr" style="display:none;color:#ff5a5a;margin-top:10px;font-size:13px"></div>
+      </div>
+    </div>
+  `;
+
+  const btn = document.getElementById("inviteBtn");
+  btn.addEventListener("pointerdown", () => btn.classList.add("pressed"));
+  const up = () => btn.classList.remove("pressed");
+  btn.addEventListener("pointerup", up);
+  btn.addEventListener("pointerleave", up);
+  btn.addEventListener("pointercancel", up);
+
+  btn.onclick = async () => {
+    const code = (document.getElementById("inviteCode").value || "").trim();
+    const err = document.getElementById("inviteErr");
+    err.style.display = "none";
+    err.textContent = "";
+
+    if (!code) {
+      err.style.display = "block";
+      err.textContent = "Введите код.";
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = "Проверяем...";
+
+    try {
+      await api("/api/redeem", { code });
+      window.location.href = "/?autologin=1";
+    } catch {
+      err.style.display = "block";
+      err.textContent = "Код неверный или уже использован.";
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Авторизоваться";
+    }
+  };
+}
+
+// ================== Boot ==================
 async function boot() {
   mustBeTelegram();
   setAvatarLetter();
+
   wireMenu();
   wireTopup();
   wireSheet();
 
   try {
     const r = await api("/api/auth");
-    const me = r.me;
+    ME = r.me;
 
-    el("balance").textContent = formatRub(me.balance_rub);
-    el("tariffName").textContent = me.tariff?.name || "—";
-    el("tariffPrice").textContent = `${me.tariff?.price_rub ?? 0} ₽ / ${me.tariff?.period_months ?? 1} мес`;
-    el("nextPay").textContent = `Окончание: ${me.tariff?.expires_at || "—"}`;
+    el("balance").textContent = formatRub(ME.balance_rub);
+    el("tariffName").textContent = ME.tariff?.name || "—";
+    el("tariffPrice").textContent = `${ME.tariff?.price_rub ?? 0} ₽ / ${ME.tariff?.period_months ?? 1} мес`;
+    el("nextPay").textContent = `Окончание: ${ME.tariff?.expires_at || "—"}`;
 
     // user configs
-    try {
-      const myCfgs = await api("/api/my_configs");
-      renderUserConfigs(myCfgs);
-    } catch (e) {
-      el("vpnList").innerHTML = `<div class="skeleton">Не удалось загрузить список</div>`;
-      console.warn(e);
-    }
+    const myCfgs = await api("/api/my_configs");
+    renderUserConfigs(myCfgs);
 
-    IS_ADMIN = (me.role === "admin");
-    if (IS_ADMIN) addAdminMenuButton();
-
-    // admin navigation wiring
-    el("adminBackHome").onclick = () => showPage("home");
-    el("configsBackAdmin").onclick = () => showPage("admin");
+    // admin
+    if (ME.role === "admin") ensureAdminMenuButton();
 
     showPage("home");
   } catch (e) {
-    if (e.status === 403) {
-      // invite screen (простая)
-      document.body.innerHTML = `
-        <div style="min-height:100vh;background:#0e1014;color:#fff;padding:22px;font-family:system-ui">
-          <div style="max-width:420px;margin:70px auto">
-            <div style="font-weight:900;font-size:20px;margin-bottom:10px">Доступ отсутствует</div>
-            <div style="opacity:.8;margin-bottom:12px">Введите код приглашения:</div>
-            <input id="inviteCode" style="width:100%;padding:14px;border-radius:14px;border:1px solid #2a2f3a;background:#161b24;color:#fff;font-size:16px" placeholder="Код">
-            <button id="inviteBtn" style="width:100%;margin-top:12px;min-height:56px;border-radius:16px;border:none;background:#2a7fff;color:#fff;font-weight:900;font-size:16px">Авторизоваться</button>
-            <div id="inviteErr" style="display:none;color:#ff5a5a;margin-top:10px"></div>
-          </div>
-        </div>
-      `;
-
-      const btn = document.getElementById("inviteBtn");
-      btn.addEventListener("pointerdown", () => btn.classList.add("pressed"));
-      const up = () => btn.classList.remove("pressed");
-      btn.addEventListener("pointerup", up);
-      btn.addEventListener("pointerleave", up);
-      btn.addEventListener("pointercancel", up);
-
-      btn.onclick = async () => {
-        const code = (document.getElementById("inviteCode").value || "").trim();
-        const err = document.getElementById("inviteErr");
-        err.style.display = "none";
-        err.textContent = "";
-
-        if (!code) {
-          err.style.display = "block";
-          err.textContent = "Введите код.";
-          return;
-        }
-
-        btn.disabled = true;
-        btn.textContent = "Проверяем...";
-
-        try {
-          await api("/api/redeem", { code });
-          // автопереход в ЛК
-          window.location.href = "/?autologin=1";
-        } catch {
-          err.style.display = "block";
-          err.textContent = "Код неверный или уже использован.";
-        } finally {
-          btn.disabled = false;
-          btn.textContent = "Авторизоваться";
-        }
-      };
-      return;
-    }
-
-    document.body.innerHTML = `<div style="color:#fff;padding:30px;font-family:system-ui">Ошибка запуска. Перейдите в Telegram.</div>`;
+    if (e.status === 403) return showInviteScreen();
+    document.body.innerHTML = `<div style="padding:24px;color:#fff;font-family:system-ui">Ошибка запуска</div>`;
     console.error(e);
   }
 }
 
-// start
 boot().catch(console.error);
