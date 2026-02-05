@@ -1,205 +1,120 @@
 <!doctype html>
 <html lang="ru">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Mini App</title>
-
-  <link rel="stylesheet" href="/styles.css?v=20276206_80">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>VPN Mini App</title>
 
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-  <!-- QR scanner lib -->
-  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+  <!-- QR (CDN) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
-  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <!-- ВАЖНО: грузим статику через /static -->
+  <link rel="stylesheet" href="/styles.css?v=20364415_7">
 </head>
 <body>
+<div class="app">
 
-<div id="app" class="app">
+  <header class="topbar">
+    <div class="user">
+      <div class="avatar" id="avatar">U</div>
 
-  <!-- TOP -->
-  <div class="topbar">
-    <div class="top-left">
-      <div id="avatar" class="avatar">U</div>
-
-      <button id="balanceBtn" class="balanceBtn" type="button">
-        <div class="balanceLabel">Баланс</div>
-        <div id="balance" class="balanceValue">—</div>
+      <button class="balanceBtn" id="balanceBtn" type="button">
+        <div class="label">Баланс</div>
+        <div class="balance" id="balance">—</div>
       </button>
     </div>
 
     <div class="menu">
-      <button id="burger" class="burger" type="button" aria-label="menu">
+      <button class="burger" id="burger" aria-label="Меню" type="button">
         <span></span><span></span><span></span>
       </button>
 
-      <div id="dropdown" class="dropdown" style="display:none">
-        <button id="btnRefresh" class="dropdown-btn" type="button">Пополнить</button>
-        <!-- админ-кнопка добавится через JS -->
+      <div class="dropdown" id="dropdown">
+        <div class="dropdown-title">Тариф</div>
+        <div class="tariffLine">
+          <div class="tariffName" id="tariffName">—</div>
+          <div class="tariffPrice" id="tariffPrice">—</div>
+        </div>
+        <div class="nextPay" id="nextPay">Следующее списание: —</div>
+
+        <div class="dropdown-sep"></div>
+        <button class="dropdown-btn" id="btnRefresh" type="button">Обновить</button>
       </div>
     </div>
-  </div>
+  </header>
 
-  <!-- PAGES -->
-  <div class="pages">
+  <main class="content">
     <!-- HOME -->
-    <div id="pageHome" class="page page-active">
-      <div class="card">
-        <div class="cardTitle">Тариф</div>
-        <div class="row">
-          <div>
-            <div id="tariffName" class="big">—</div>
-            <div id="tariffPrice" class="muted">—</div>
-          </div>
-          <div id="nextPay" class="pill">—</div>
-        </div>
+    <section class="page page-active" id="pageHome">
+      <h2 class="section-title">VPN подключения</h2>
+      <div class="list" id="vpnList"></div>
+    </section>
+
+    <!-- TARIFFS -->
+    <section class="page" id="pageTariffs">
+      <div class="pageHeader">
+        <button class="backBtn" id="backFromTariffs" type="button">←</button>
+        <div class="pageTitle">Выбор тарифа</div>
       </div>
 
-      <div class="card">
-        <div class="cardTitle">Подключения</div>
-        <div id="vpnList" class="list">
-          <div class="muted">Загрузка…</div>
-        </div>
-      </div>
-    </div>
+      <div class="cards" id="tariffCards"></div>
+      <div class="hint">Пока заглушка: по нажатию просто меняем отображение тарифа.</div>
+    </section>
 
     <!-- TOPUP -->
-    <div id="pageTopup" class="page">
+    <section class="page" id="pageTopup">
       <div class="pageHeader">
-        <button id="backFromTopup" class="btn ghost" type="button">← Назад</button>
+        <button class="backBtn" id="backFromTopup" type="button">←</button>
         <div class="pageTitle">Пополнение</div>
       </div>
 
-      <div class="card">
-        <div class="cardTitle">Способ оплаты</div>
-        <div class="grid">
-          <button class="btn" type="button">⭐️ За звезды</button>
-          <button class="btn" type="button">🪙 Крипта</button>
-          <button class="btn" type="button">🏦 Перевод</button>
-        </div>
-        <div class="muted" style="margin-top:10px">Пока заглушки.</div>
+      <div class="cards">
+        <button class="card" id="payStars" type="button">
+          <div class="cardTitle">⭐ За звезды</div>
+          <div class="cardValue">Открыть</div>
+        </button>
+
+        <button class="card" id="payCrypto" type="button">
+          <div class="cardTitle">₿ Крипта</div>
+          <div class="cardValue">Открыть</div>
+        </button>
+
+        <button class="card" id="payTransfer" type="button">
+          <div class="cardTitle">⇄ Перевод</div>
+          <div class="cardValue">Открыть</div>
+        </button>
       </div>
+
+      <div class="hint">Пока заглушка: потом подвяжем оплату.</div>
+    </section>
+  </main>
+
+  <!-- Bottom sheet -->
+  <div class="sheetOverlay" id="sheetOverlay"></div>
+  <div class="sheet" id="sheet">
+    <div class="sheetHandle"></div>
+
+    <div class="sheetTitle" id="sheetTitle">Подключение</div>
+
+    <div class="qrWrap">
+      <div id="qr"></div>
     </div>
 
-    <!-- ADMIN -->
-    <div id="pageAdmin" class="page">
-      <div class="pageHeader">
-        <button id="adminBackHome" class="btn ghost" type="button">← Назад</button>
-        <div class="pageTitle">Админка</div>
-      </div>
+    <div class="copyHint" id="copyHint">Нажми на конфиг ниже — скопируется</div>
 
-      <div class="card">
-        <div class="cardTitle">Приглашения</div>
-        <div class="grid">
-          <button id="invUser" class="btn" type="button">+ User</button>
-          <button id="invAdmin" class="btn" type="button">+ Admin</button>
-        </div>
-        <div class="muted" style="margin-top:10px">Код копируется в буфер.</div>
-      </div>
+    <button class="configBox" id="configBox" type="button">
+      <div class="configText" id="configText">—</div>
+      <div class="configSub">Tap to copy</div>
+    </button>
 
-      <div class="card">
-        <div class="cardTitle">Пользователи</div>
-        <div id="adminUsersList" class="list"></div>
-      </div>
-    </div>
-
-    <!-- ADMIN USER (баланс + кнопка конфигов) -->
-    <div id="pageAdminUser" class="page">
-      <div class="pageHeader">
-        <button id="adminUserBack" class="btn ghost" type="button">← Назад</button>
-        <div class="pageTitle" id="adminUserTitle">Пользователь</div>
-      </div>
-
-      <div class="card">
-        <div class="cardTitle">Баланс</div>
-        <div class="row">
-          <div class="muted">Текущий:</div>
-          <div class="big" id="adminUserBalanceNow">—</div>
-        </div>
-
-        <input id="adminUserBalanceInput" class="input" placeholder="Новый баланс, число" />
-        <div class="grid" style="margin-top:10px">
-          <button id="adminSaveBalance" class="btn" type="button">Сохранить</button>
-        </div>
-        <div id="adminBalanceErr" class="err" style="display:none"></div>
-      </div>
-
-      <div class="card">
-        <div class="cardTitle">Тариф</div>
-
-        <div class="row">
-          <div class="muted">Текущий:</div>
-          <div class="big" id="adminUserTariffNow">—</div>
-        </div>
-
-        <select id="adminTariffSelect" class="input"></select>
-
-        <div class="grid" style="margin-top:10px">
-          <button id="adminSaveTariff" class="btn" type="button">Сохранить тариф</button>
-        </div>
-
-        <div id="adminTariffErr" class="err" style="display:none"></div>
-      </div>
-
-      <div class="card">
-        <div class="cardTitle">Действия</div>
-        <button id="adminDeleteUser" class="btn danger" type="button">Удалить учётку</button>
-        <button id="adminOpenConfigs" class="btn ghost" type="button">Конфиги</button>
-      </div>
-    </div>
-
-    <!-- ADMIN CONFIGS -->
-    <div id="pageAdminConfigs" class="page">
-      <div class="pageHeader">
-        <button id="configsBack" class="btn ghost" type="button">← Назад</button>
-        <div class="pageTitle" id="configsTitle">Конфиги</div>
-      </div>
-
-      <div class="card">
-        <div class="cardTitle">Добавить конфиг</div>
-
-        <div class="row" style="gap:10px">
-          <button id="cfgToggleComposer" class="btn" type="button">+</button>
-          <div class="muted">Вставь текст или сканируй QR</div>
-        </div>
-
-        <div id="cfgComposer" style="display:none;margin-top:10px">
-          <textarea id="cfgText" class="textarea" placeholder="vless://... или любой текст подключения"></textarea>
-
-          <div class="grid" style="margin-top:10px">
-            <button id="scanQrBtn" class="btn ghost" type="button">Сканировать QR</button>
-            <button id="saveCfgBtn" class="btn" type="button">Сохранить</button>
-          </div>
-
-          <div id="cfgErr" class="err" style="display:none"></div>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="cardTitle">Список</div>
-        <div id="adminConfigsList" class="list"></div>
-      </div>
-    </div>
+    <button class="sheetClose" id="sheetClose" type="button">Закрыть</button>
   </div>
 </div>
 
-<!-- SHEET -->
-<div id="sheetOverlay" class="sheetOverlay"></div>
-<div id="sheet" class="sheet">
-  <div class="sheetTop">
-    <div id="sheetTitle" class="sheetTitle">Конфиг</div>
-    <button id="sheetClose" class="btn ghost" type="button">✕</button>
-  </div>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 
-  <div id="qr" class="qr"></div>
-
-  <div id="configBox" class="configBox">
-    <div class="muted">Нажми, чтобы скопировать</div>
-    <pre id="configText" class="configText"></pre>
-  </div>
-</div>
-
-<script src="/app.js?v=20270206_80"></script>
+<script src="/app.js?v=20364415_7"></script>
 </body>
 </html>
