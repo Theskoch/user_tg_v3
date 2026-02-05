@@ -1,30 +1,8 @@
-// ---------- Telegram ----------
 const tg = window.Telegram?.WebApp;
 if (tg) {
   tg.ready();
   tg.expand();
 }
-
-function showBlockingMessage(text) {
-  document.body.innerHTML = `
-    <div style="padding:16px;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#fff;background:#0e1014;min-height:100vh">
-      <div style="max-width:520px;margin:40px auto">
-        <div style="font-size:18px;font-weight:800;margin-bottom:8px">VPN Mini App</div>
-        <div style="opacity:.8">${escapeHtml(text)}</div>
-      </div>
-    </div>
-  `;
-}
-
-function mustBeInTelegram() {
-  if (!tg || !tg.initData) {
-    showBlockingMessage("Откройте приложение через Telegram.");
-    throw new Error("Not in Telegram");
-  }
-}
-
-// ---------- Helpers ----------
-const el = (id) => document.getElementById(id);
 
 function escapeHtml(s) {
   return String(s || "")
@@ -35,8 +13,27 @@ function escapeHtml(s) {
     .replaceAll("'", "&#039;");
 }
 
+function showBlockingMessage(text) {
+  document.body.innerHTML = `
+    <div style="padding:16px;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#fff;background:#0e1014;min-height:100vh">
+      <div style="max-width:520px;margin:40px auto">
+        <div style="font-size:18px;font-weight:800;margin-bottom:8px">Ошибка</div>
+        <div style="opacity:.85;line-height:1.4">${escapeHtml(text)}</div>
+      </div>
+    </div>
+  `;
+}
+
+function mustBeInTelegram() {
+  if (!tg || !tg.initData) {
+    showBlockingMessage("Ошибка запуска. Перейдите в Telegram.");
+    throw new Error("Not in Telegram");
+  }
+}
+
+const el = (id) => document.getElementById(id);
+
 async function apiPost(path) {
-  // Все API закрыты и требуют initData
   const r = await fetch(path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -45,12 +42,10 @@ async function apiPost(path) {
   });
 
   if (!r.ok) {
-    const t = await r.text().catch(() => "");
-    const err = new Error(`${path} -> ${r.status} ${t}`.trim());
+    const err = new Error(`${path} -> ${r.status}`);
     err.httpStatus = r.status;
     throw err;
   }
-
   return r.json();
 }
 
@@ -74,7 +69,7 @@ async function copyToClipboard(text) {
   }
 }
 
-// ---------- UI wiring ----------
+// ---------- UI elements ----------
 const avatarEl = el("avatar");
 const balanceEl = el("balance");
 const balanceBtn = el("balanceBtn");
@@ -87,30 +82,17 @@ const tariffNameEl = el("tariffName");
 const tariffPriceEl = el("tariffPrice");
 const nextPayEl = el("nextPay");
 
-const vpnList = el("vpnList");
+const vpnList = el("vpnList"); // можно позже переименовать в list
+const tariffCardsWrap = el("tariffCards");
 
 // Pages
 const pageHome = el("pageHome");
 const pageTariffs = el("pageTariffs");
 const pageTopup = el("pageTopup");
 
-const backFromTariffs = el("backFromTariffs");
-const backFromTopup = el("backFromTopup");
+el("backFromTariffs")?.addEventListener("click", () => showPage("home"));
+el("backFromTopup")?.addEventListener("click", () => showPage("home"));
 
-// Tariff cards container
-const tariffCardsWrap = el("tariffCards");
-
-// Bottom sheet
-const sheet = el("sheet");
-const sheetOverlay = el("sheetOverlay");
-const sheetTitle = el("sheetTitle");
-const sheetClose = el("sheetClose");
-const configBox = el("configBox");
-const configText = el("configText");
-
-let currentConfig = "";
-
-// --- menu toggle ---
 burger?.addEventListener("click", () => {
   dropdown.style.display = dropdown.style.display === "block" ? "none" : "block";
 });
@@ -119,7 +101,6 @@ document.addEventListener("click", (e) => {
   if (!e.target.closest(".menu")) dropdown.style.display = "none";
 });
 
-// --- navigation ---
 btnRefresh?.addEventListener("click", () => {
   dropdown.style.display = "none";
   showPage("tariffs");
@@ -130,15 +111,20 @@ balanceBtn?.addEventListener("click", () => {
   showPage("topup");
 });
 
-backFromTariffs?.addEventListener("click", () => showPage("home"));
-backFromTopup?.addEventListener("click", () => showPage("home"));
+el("payStars")?.addEventListener("click", () => toast("Заглушка"));
+el("payCrypto")?.addEventListener("click", () => toast("Заглушка"));
+el("payTransfer")?.addEventListener("click", () => toast("Заглушка"));
 
-// --- topup buttons (заглушки) ---
-el("payStars")?.addEventListener("click", () => toast("Оплата звездами — заглушка"));
-el("payCrypto")?.addEventListener("click", () => toast("Крипта — заглушка"));
-el("payTransfer")?.addEventListener("click", () => toast("Перевод — заглушка"));
+// Bottom sheet (оставляем функционал как есть)
+const sheet = el("sheet");
+const sheetOverlay = el("sheetOverlay");
+const sheetTitle = el("sheetTitle");
+const sheetClose = el("sheetClose");
+const configBox = el("configBox");
+const configText = el("configText");
 
-// --- sheet ---
+let currentConfig = "";
+
 sheetOverlay?.addEventListener("click", closeSheet);
 sheetClose?.addEventListener("click", closeSheet);
 
@@ -149,23 +135,23 @@ configBox?.addEventListener("click", async () => {
 });
 
 function openSheet({ title, config }) {
-  sheetTitle.textContent = title || "Подключение";
+  if (sheetTitle) sheetTitle.textContent = title || "Подключение";
   currentConfig = config || "";
-  configText.textContent = currentConfig || "—";
-
+  if (configText) configText.textContent = currentConfig || "—";
   renderQR(currentConfig);
 
-  sheet.classList.add("open");
-  sheetOverlay.classList.add("open");
+  sheet?.classList.add("open");
+  sheetOverlay?.classList.add("open");
 }
 
 function closeSheet() {
-  sheet.classList.remove("open");
-  sheetOverlay.classList.remove("open");
+  sheet?.classList.remove("open");
+  sheetOverlay?.classList.remove("open");
 }
 
 function renderQR(text) {
   const qrWrap = document.getElementById("qr");
+  if (!qrWrap) return;
   qrWrap.innerHTML = "";
 
   if (!window.QRCode) {
@@ -181,14 +167,15 @@ function renderQR(text) {
   new QRCode(qrWrap, { text: text || "empty", width: 180, height: 180 });
 }
 
+// ---------- UI helpers ----------
 function showPage(name) {
-  pageHome.classList.remove("page-active");
-  pageTariffs.classList.remove("page-active");
-  pageTopup.classList.remove("page-active");
+  pageHome?.classList.remove("page-active");
+  pageTariffs?.classList.remove("page-active");
+  pageTopup?.classList.remove("page-active");
 
-  if (name === "home") pageHome.classList.add("page-active");
-  if (name === "tariffs") pageTariffs.classList.add("page-active");
-  if (name === "topup") pageTopup.classList.add("page-active");
+  if (name === "home") pageHome?.classList.add("page-active");
+  if (name === "tariffs") pageTariffs?.classList.add("page-active");
+  if (name === "topup") pageTopup?.classList.add("page-active");
 }
 
 function setAvatarLetterFromTelegram() {
@@ -204,16 +191,18 @@ function formatRub(amount) {
 }
 
 function setTariffUI(name, priceText, nextDate) {
-  tariffNameEl.textContent = name || "—";
-  tariffPriceEl.textContent = priceText || "—";
-  nextPayEl.textContent = `Следующее списание: ${nextDate || "—"}`;
+  if (tariffNameEl) tariffNameEl.textContent = name || "—";
+  if (tariffPriceEl) tariffPriceEl.textContent = priceText || "—";
+  if (nextPayEl) nextPayEl.textContent = `Следующее списание: ${nextDate || "—"}`;
 }
 
 // ---------- Renders ----------
-function renderVpnList(vpns) {
+function renderList(items) {
+  // пока оставим существующий контейнер vpnList, но можно переименовать позже
+  if (!vpnList) return;
   vpnList.innerHTML = "";
 
-  (vpns || []).forEach(v => {
+  (items || []).forEach(v => {
     const row = document.createElement("div");
     row.className = "vpn";
 
@@ -234,7 +223,7 @@ function renderVpnList(vpns) {
     btn.textContent = "Подключить";
     btn.addEventListener("click", () => {
       openSheet({
-        title: `Подключение: ${v.name}`,
+        title: `${v.name}`,
         config: v.config
       });
     });
@@ -254,6 +243,7 @@ function renderVpnList(vpns) {
 }
 
 function renderTariffs(tariffs) {
+  if (!tariffCardsWrap) return;
   tariffCardsWrap.innerHTML = "";
 
   (tariffs || []).forEach(t => {
@@ -265,12 +255,11 @@ function renderTariffs(tariffs) {
       <div class="cardValue">${t.price_rub} ₽</div>
     `;
     btn.addEventListener("click", () => {
-      // пока заглушка: меняем отображение
       if (t.months === 1) setTariffUI("Basic", "150 ₽/мес", "01.01.2026");
       if (t.months === 6) setTariffUI("Half-year", "700 ₽/6 мес", "01.01.2026");
       if (t.months === 12) setTariffUI("Year", "1200 ₽/12 мес", "01.01.2026");
       showPage("home");
-      toast("Тариф выбран (заглушка)");
+      toast("Готово");
     });
     tariffCardsWrap.appendChild(btn);
   });
@@ -282,42 +271,41 @@ function pluralMonths(n) {
   return "месяцев";
 }
 
-// ---------- Auth + Load ----------
+// ---------- Boot ----------
 async function run() {
   mustBeInTelegram();
   setAvatarLetterFromTelegram();
 
-  // 1) AUTH: проверка подписи + доступ по БД
+  // AUTH
   try {
     await apiPost("/api/auth");
   } catch (err) {
     if (err.httpStatus === 403) {
-      showBlockingMessage("Нет доступа. Ваш Telegram ID не добавлен в систему.");
+      showBlockingMessage("У вас отсутствует доступ.");
       return;
     }
-    showBlockingMessage("Ошибка авторизации. Попробуйте открыть приложение заново.");
+    showBlockingMessage("Ошибка запуска. Перейдите в Telegram.");
     console.error(err);
     return;
   }
 
-  // 2) USER
+  // USER
   const user = await apiPost("/api/user");
-  balanceEl.textContent = formatRub(user.balance_rub);
+  if (balanceEl) balanceEl.textContent = formatRub(user.balance_rub);
   setTariffUI(user.tariff_name, user.tariff_price_text, user.next_charge);
 
-  // 3) VPN list
-  const vpns = await apiPost("/api/vpn");
-  renderVpnList(vpns);
+  // LIST (пока те же данные, позже переименуем endpoint/поля)
+  const items = await apiPost("/api/vpn");
+  renderList(items);
 
-  // 4) Tariffs list
+  // TARIFFS
   const tariffs = await apiPost("/api/tariffs");
   renderTariffs(tariffs);
 
-  // по умолчанию home
   showPage("home");
 }
 
 run().catch((e) => {
   console.error(e);
-  showBlockingMessage("Ошибка запуска приложения.");
+  showBlockingMessage("Ошибка запуска. Перейдите в Telegram.");
 });
