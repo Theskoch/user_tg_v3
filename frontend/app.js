@@ -176,8 +176,9 @@ function showInviteScreen() {
 
     try {
       await api("/api/redeem", { code });
-      // успех: автопереход (перезапуск)
-      await boot();
+      // успех: сразу переходим на главную страницу приложения
+      window.location.href = "/?autologin=1";
+      return;
     } catch (e) {
       err.style.display = "block";
       err.textContent = "Код неверный или уже использован.";
@@ -208,6 +209,13 @@ function addAdminButton() {
       toast("Ошибка админки");
     });
   };
+  // spacer между существующими кнопками и админкой
+  const spacer = document.createElement("div");
+  spacer.style.height = "8px";
+  menu.appendChild(spacer);
+
+  menu.appendChild(btn);
+
 
   menu.appendChild(btn);
 }
