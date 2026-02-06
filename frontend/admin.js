@@ -3,21 +3,25 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadAdminContent() {
         try {
             const tg = window.Telegram?.WebApp;
-            if (!tg || !tg.initData) {
-                alert('Пожалуйста, откройте приложение через Telegram');
-                return;
-            }
+            const initData = tg?.initData || localStorage.getItem('initData');
 
             const response = await fetch('/api/check-admin-auth', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ initData: tg.initData })
+                body: JSON.stringify({ initData })
             });
             const { isAdmin } = await response.json();
 
             if (!isAdmin) {
-                alert('У вас нет доступа к администраторской панели');
-                window.location.href = '/';
+                // Fallback to previous admin console method
+                const script = document.createElement('script');
+                script.src = '/app.js';
+                script.onload = () => {
+                    if (window.openAdminConsole) {
+                        window.openAdminConsole();
+                    }
+                };
+                document.body.appendChild(script);
                 return;
             }
 
@@ -25,7 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const contentResponse = await fetch('/api/admin-content', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ initData: tg.initData })
+                body: JSON.stringify({ initData })
             });
             const content = await contentResponse.json();
 
@@ -44,8 +48,16 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
         } catch (error) {
             console.error('Ошибка загрузки admin-контента:', error);
-            alert('Не удалось загрузить административную панель');
-            window.location.href = '/';
+            
+            // Fallback to previous admin console method
+            const script = document.createElement('script');
+            script.src = '/app.js';
+            script.onload = () => {
+                if (window.openAdminConsole) {
+                    window.openAdminConsole();
+                }
+            };
+            document.body.appendChild(script);
         }
     }
 
