@@ -1,120 +1,218 @@
 <!doctype html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>VPN Mini App</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Mini App</title>
 
+  <link rel="stylesheet" href="/styles.css?v=1" />
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-
-  <!-- QR (CDN) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-
-  <!-- ВАЖНО: грузим статику через /static -->
-  <link rel="stylesheet" href="/styles.css?v=20366415_7">
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+  <script src="/app.js?v=1" defer></script>
 </head>
 <body>
-<div class="app">
 
-  <header class="topbar">
-    <div class="user">
-      <div class="avatar" id="avatar">U</div>
+<div id="root">
 
-      <button class="balanceBtn" id="balanceBtn" type="button">
-        <div class="label">Баланс</div>
-        <div class="balance" id="balance">—</div>
-      </button>
+  <!-- TG ONLY ERROR (browser) -->
+  <div id="notTelegram" class="center" style="display:none">
+    <div class="card">
+      <div class="h1">Ошибка запуска</div>
+      <div class="muted">Откройте приложение в Telegram.</div>
     </div>
+  </div>
 
-    <div class="menu">
-      <button class="burger" id="burger" aria-label="Меню" type="button">
-        <span></span><span></span><span></span>
-      </button>
+  <!-- INVITE / NO ACCESS -->
+  <div id="inviteScreen" class="center" style="display:none">
+    <div class="card">
+      <div class="h1">Доступ отсутствует</div>
+      <div class="muted">Введите код приглашения от администратора.</div>
 
-      <div class="dropdown" id="dropdown">
-        <div class="dropdown-title">Тариф</div>
-        <div class="tariffLine">
-          <div class="tariffName" id="tariffName">—</div>
-          <div class="tariffPrice" id="tariffPrice">—</div>
+      <input id="inviteInput" class="input" placeholder="Код приглашения" />
+      <button id="inviteBtn" class="btn primary">Авторизоваться</button>
+
+      <div id="inviteErr" class="err" style="display:none"></div>
+    </div>
+  </div>
+
+  <!-- APP -->
+  <div id="app" style="display:none">
+    <div id="topbar" class="topbar">
+      <div class="left">
+        <div id="avatar" class="avatar">U</div>
+        <button id="balanceBtn" class="balance">
+          <div class="muted small">Баланс</div>
+          <div id="balanceVal" class="balanceVal">—</div>
+        </button>
+      </div>
+
+      <div class="menu">
+        <button id="burger" class="burger" aria-label="menu">
+          <span></span><span></span><span></span>
+        </button>
+        <div id="dropdown" class="dropdown" style="display:none">
+          <button id="topupMenuBtn" class="dropBtn">Пополнить</button>
+          <button id="adminMenuBtn" class="dropBtn" style="display:none">Админ панель</button>
         </div>
-        <div class="nextPay" id="nextPay">Следующее списание: —</div>
-
-        <div class="dropdown-sep"></div>
-        <button class="dropdown-btn" id="btnRefresh" type="button">Обновить</button>
       </div>
     </div>
-  </header>
 
-  <main class="content">
-    <!-- HOME -->
-    <section class="page page-active" id="pageHome">
-      <h2 class="section-title">VPN подключения</h2>
-      <div class="list" id="vpnList"></div>
-    </section>
+    <!-- pages -->
+    <div class="pages">
 
-    <!-- TARIFFS -->
-    <section class="page" id="pageTariffs">
-      <div class="pageHeader">
-        <button class="backBtn" id="backFromTariffs" type="button">←</button>
-        <div class="pageTitle">Выбор тарифа</div>
+      <!-- HOME -->
+      <div id="pageHome" class="page page-active">
+        <div class="card">
+          <div class="row">
+            <div>
+              <div class="muted small">Тариф</div>
+              <div id="tariffName" class="h2">—</div>
+              <div id="tariffPrice" class="muted">—</div>
+            </div>
+            <div id="tariffBadge" class="badge">—</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="h2">Подключения</div>
+          <div id="myConfigs" class="list"></div>
+        </div>
       </div>
 
-      <div class="cards" id="tariffCards"></div>
-      <div class="hint">Пока заглушка: по нажатию просто меняем отображение тарифа.</div>
-    </section>
+      <!-- TOPUP -->
+      <div id="pageTopup" class="page">
+        <div class="pageHead">
+          <button id="backFromTopup" class="btn ghost">← Назад</button>
+          <div class="h2">Пополнение</div>
+        </div>
 
-    <!-- TOPUP -->
-    <section class="page" id="pageTopup">
-      <div class="pageHeader">
-        <button class="backBtn" id="backFromTopup" type="button">←</button>
-        <div class="pageTitle">Пополнение</div>
+        <div class="card">
+          <div class="grid">
+            <button class="btn">⭐️ За звезды</button>
+            <button class="btn">🪙 Крипта</button>
+            <button class="btn">🏦 Перевод</button>
+          </div>
+          <div class="muted small" style="margin-top:10px">Пока заглушки.</div>
+        </div>
       </div>
 
-      <div class="cards">
-        <button class="card" id="payStars" type="button">
-          <div class="cardTitle">⭐ За звезды</div>
-          <div class="cardValue">Открыть</div>
-        </button>
+      <!-- ADMIN LIST -->
+      <div id="pageAdmin" class="page">
+        <div class="pageHead">
+          <button id="backFromAdmin" class="btn ghost">← Назад</button>
+          <div class="h2">Админ</div>
+        </div>
 
-        <button class="card" id="payCrypto" type="button">
-          <div class="cardTitle">₿ Крипта</div>
-          <div class="cardValue">Открыть</div>
-        </button>
+        <div class="card">
+          <div class="row">
+            <div>
+              <div class="muted small">Приглашения</div>
+              <div class="muted">Код копируется в буфер</div>
+            </div>
+          </div>
+          <div class="grid" style="margin-top:10px">
+            <button id="inviteUserBtn" class="btn">+ User</button>
+            <button id="inviteAdminBtn" class="btn">+ Admin</button>
+          </div>
+        </div>
 
-        <button class="card" id="payTransfer" type="button">
-          <div class="cardTitle">⇄ Перевод</div>
-          <div class="cardValue">Открыть</div>
-        </button>
+        <div class="card">
+          <div class="h2">Пользователи</div>
+          <div id="adminUsers" class="list"></div>
+        </div>
       </div>
 
-      <div class="hint">Пока заглушка: потом подвяжем оплату.</div>
-    </section>
-  </main>
+      <!-- ADMIN USER DETAIL -->
+      <div id="pageAdminUser" class="page">
+        <div class="pageHead">
+          <button id="backFromAdminUser" class="btn ghost">← Назад</button>
+          <div id="adminUserTitle" class="h2">Пользователь</div>
+        </div>
 
-  <!-- Bottom sheet -->
-  <div class="sheetOverlay" id="sheetOverlay"></div>
-  <div class="sheet" id="sheet">
-    <div class="sheetHandle"></div>
+        <div class="card">
+          <div class="h2">Тариф</div>
+          <div class="row" style="margin-top:8px">
+            <div class="muted">Текущий:</div>
+            <div id="adminTariffNow" class="badge">—</div>
+          </div>
 
-    <div class="sheetTitle" id="sheetTitle">Подключение</div>
+          <select id="adminTariffSelect" class="select"></select>
+          <button id="adminSaveTariff" class="btn primary" style="margin-top:10px">Сохранить тариф</button>
+          <div id="adminTariffErr" class="err" style="display:none"></div>
+        </div>
 
-    <div class="qrWrap">
-      <div id="qr"></div>
+        <div class="card">
+          <div class="h2">Баланс</div>
+          <div class="row" style="margin-top:8px">
+            <div class="muted">Текущий:</div>
+            <div id="adminBalanceNow" class="badge">—</div>
+          </div>
+
+          <input id="adminBalanceInput" class="input" placeholder="Новый баланс (число)" />
+          <button id="adminSaveBalance" class="btn primary" style="margin-top:10px">Сохранить баланс</button>
+          <div id="adminBalanceErr" class="err" style="display:none"></div>
+        </div>
+
+        <div class="card">
+          <div class="row">
+            <div class="h2">Коннекты пользователя</div>
+            <button id="addConnBtn" class="btn">+</button>
+          </div>
+          <div id="adminConfigs" class="list" style="margin-top:10px"></div>
+        </div>
+
+        <div class="card">
+          <button id="deleteUserBtn" class="btn danger">Удалить пользователя</button>
+        </div>
+      </div>
+
     </div>
-
-    <div class="copyHint" id="copyHint">Нажми на конфиг ниже — скопируется</div>
-
-    <button class="configBox" id="configBox" type="button">
-      <div class="configText" id="configText">—</div>
-      <div class="configSub">Tap to copy</div>
-    </button>
-
-    <button class="sheetClose" id="sheetClose" type="button">Закрыть</button>
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<!-- SHEET (view config) -->
+<div id="sheetOverlay" class="overlay" style="display:none"></div>
+<div id="sheet" class="sheet" style="display:none">
+  <div class="row">
+    <div id="sheetTitle" class="h2">Конфиг</div>
+    <button id="closeSheet" class="btn ghost">✕</button>
+  </div>
+  <div id="qrWrap" class="qrWrap"></div>
+  <div id="cfgTextBox" class="cfgBox">
+    <div class="muted small">Нажмите чтобы скопировать</div>
+    <pre id="sheetText" class="pre"></pre>
+  </div>
+</div>
 
-<script src="/app.js?v=20366415_7"></script>
+<!-- ADD CONFIG MODAL -->
+<div id="addModal" class="overlay" style="display:none"></div>
+<div id="addPanel" class="sheet" style="display:none">
+  <div class="row">
+    <div class="h2">Добавить коннект</div>
+    <button id="cancelAdd" class="btn ghost">✕</button>
+  </div>
+
+  <textarea id="addText" class="textarea" placeholder="Вставь текст или сканируй QR"></textarea>
+
+  <div class="grid" style="margin-top:10px">
+    <button id="scanBtn" class="btn">Сканировать QR</button>
+    <button id="saveBtn" class="btn primary">Сохранить</button>
+  </div>
+
+  <div id="addErr" class="err" style="display:none"></div>
+</div>
+
+<!-- QR SCANNER -->
+<div id="qrModal" class="overlay" style="display:none"></div>
+<div id="qrPanel" class="sheet" style="display:none">
+  <div class="row">
+    <div class="h2">Сканер QR</div>
+    <button id="closeQr" class="btn ghost">✕</button>
+  </div>
+  <video id="qrVideo" class="video" playsinline></video>
+  <canvas id="qrCanvas" style="display:none"></canvas>
+  <div id="qrHint" class="muted small" style="margin-top:8px">Наведи камеру на QR</div>
+</div>
+
 </body>
 </html>

@@ -1,0 +1,8 @@
+{
+  "tariffs": [
+    { "id": 1, "name": "Lite",  "period_months": 1,  "price_rub": 150 },
+    { "id": 2, "name": "Uwuw",  "period_months": 6,  "price_rub": 700 },
+    { "id": 3, "name": "Pro",   "period_months": 12, "price_rub": 1200 },
+    { "id": 4, "name": "Prime", "period_months": 12, "price_rub": 1 }
+  ]
+}
