@@ -356,14 +356,33 @@ async function boot(){
   el("backFromAdminUser").onclick = ()=> setPage("pageAdmin");
 
   // admin actions
+  let LAST_INVITE_CODE = "";
+
+  async function generateInvite(role){
+    const r = await api("/api/admin/invite", { role });
+    LAST_INVITE_CODE = r.code;
+    el("inviteCodeValue").textContent = r.code;
+  }
+
   el("inviteUserBtn").onclick = async ()=> {
-    const r = await api("/api/admin/invite", { role:"user" });
-    await navigator.clipboard.writeText(r.code).catch(()=>{});
+    await generateInvite("user");
   };
+
   el("inviteAdminBtn").onclick = async ()=> {
-    const r = await api("/api/admin/invite", { role:"admin" });
-    await navigator.clipboard.writeText(r.code).catch(()=>{});
+    await generateInvite("admin");
   };
+
+  el("copyInviteBtn").onclick = async ()=> {
+    if (!LAST_INVITE_CODE) return;
+    try {
+      await navigator.clipboard.writeText(LAST_INVITE_CODE);
+      el("copyInviteBtn").textContent = "Скопировано ✓";
+      setTimeout(()=> el("copyInviteBtn").textContent = "Скопировать", 1200);
+    } catch {
+      alert("Не удалось скопировать код");
+    }
+  };
+
 
   // invite
   el("inviteBtn").onclick = redeemFlow;
