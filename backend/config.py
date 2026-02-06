@@ -7,15 +7,17 @@ DATA_DIR.mkdir(exist_ok=True)
 
 DB_PATH = str(DATA_DIR / "app.db")
 
-# ОБЯЗАТЕЛЬНО для прод: токен бота, который открывает mini app
-BOT_TOKEN = os.getenv("BOT_TOKEN", "")
+BOT_TOKEN = os.getenv("BOT_TOKEN", "").strip()
+if not BOT_TOKEN:
+    raise RuntimeError("BOT_TOKEN is required")
 
-# В DEV можно временно отключить проверку подписи initData
-DEV_DISABLE_INITDATA_VERIFY = os.getenv("DEV_DISABLE_INITDATA_VERIFY", "0") == "1"
+INITIAL_ADMIN_TG_ID = int(os.getenv("INITIAL_ADMIN_TG_ID", "0"))
+if INITIAL_ADMIN_TG_ID <= 0:
+    raise RuntimeError("INITIAL_ADMIN_TG_ID is required and must be > 0")
 
-# Нулевой админ (создаётся командой init)
-ZERO_ADMIN_TG_ID = int(os.getenv("ZERO_ADMIN_TG_ID", "424431134"))
-ZERO_ADMIN_FIRST_NAME = os.getenv("ZERO_ADMIN_FIRST_NAME", "A")
-ZERO_ADMIN_USERNAME = os.getenv("ZERO_ADMIN_USERNAME", "admin")
-ZERO_ADMIN_BALANCE = float(os.getenv("ZERO_ADMIN_BALANCE", "100"))
-ZERO_ADMIN_TARIFF_ID = int(os.getenv("ZERO_ADMIN_TARIFF_ID", "1"))
+INITIAL_ADMIN_FIRST_NAME = os.getenv("INITIAL_ADMIN_FIRST_NAME", "Admin")
+INITIAL_ADMIN_USERNAME = os.getenv("INITIAL_ADMIN_USERNAME", "admin")
+INITIAL_ADMIN_BALANCE = float(os.getenv("INITIAL_ADMIN_BALANCE", "100"))
+INITIAL_ADMIN_TARIFF_ID = int(os.getenv("INITIAL_ADMIN_TARIFF_ID", "1"))
+
+INVITE_TTL_DAYS = int(os.getenv("INVITE_TTL_DAYS", "7"))

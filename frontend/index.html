@@ -1,205 +1,207 @@
 <!doctype html>
 <html lang="ru">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
   <title>Mini App</title>
 
-  <link rel="stylesheet" href="/styles.css?v=1" />
+  <link rel="stylesheet" href="/styles.css?v=1"/>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+  <!-- QR render -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <!-- QR scan -->
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+
   <script src="/app.js?v=1" defer></script>
 </head>
 <body>
 
-<div id="root">
-
-  <!-- TG ONLY ERROR (browser) -->
-  <div id="notTelegram" class="center" style="display:none">
-    <div class="card">
-      <div class="h1">Ошибка запуска</div>
-      <div class="muted">Откройте приложение в Telegram.</div>
-    </div>
-  </div>
-
-  <!-- INVITE / NO ACCESS -->
-  <div id="inviteScreen" class="center" style="display:none">
-    <div class="card">
-      <div class="h1">Доступ отсутствует</div>
-      <div class="muted">Введите код приглашения от администратора.</div>
-
-      <input id="inviteInput" class="input" placeholder="Код приглашения" />
-      <button id="inviteBtn" class="btn primary">Авторизоваться</button>
-
-      <div id="inviteErr" class="err" style="display:none"></div>
-    </div>
-  </div>
-
-  <!-- APP -->
-  <div id="app" style="display:none">
-    <div id="topbar" class="topbar">
-      <div class="left">
-        <div id="avatar" class="avatar">U</div>
-        <button id="balanceBtn" class="balance">
-          <div class="muted small">Баланс</div>
-          <div id="balanceVal" class="balanceVal">—</div>
-        </button>
-      </div>
-
-      <div class="menu">
-        <button id="burger" class="burger" aria-label="menu">
-          <span></span><span></span><span></span>
-        </button>
-        <div id="dropdown" class="dropdown" style="display:none">
-          <button id="topupMenuBtn" class="dropBtn">Пополнить</button>
-          <button id="adminMenuBtn" class="dropBtn" style="display:none">Админ панель</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- pages -->
-    <div class="pages">
-
-      <!-- HOME -->
-      <div id="pageHome" class="page page-active">
-        <div class="card">
-          <div class="row">
-            <div>
-              <div class="muted small">Тариф</div>
-              <div id="tariffName" class="h2">—</div>
-              <div id="tariffPrice" class="muted">—</div>
-            </div>
-            <div id="tariffBadge" class="badge">—</div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="h2">Подключения</div>
-          <div id="myConfigs" class="list"></div>
-        </div>
-      </div>
-
-      <!-- TOPUP -->
-      <div id="pageTopup" class="page">
-        <div class="pageHead">
-          <button id="backFromTopup" class="btn ghost">← Назад</button>
-          <div class="h2">Пополнение</div>
-        </div>
-
-        <div class="card">
-          <div class="grid">
-            <button class="btn">⭐️ За звезды</button>
-            <button class="btn">🪙 Крипта</button>
-            <button class="btn">🏦 Перевод</button>
-          </div>
-          <div class="muted small" style="margin-top:10px">Пока заглушки.</div>
-        </div>
-      </div>
-
-      <!-- ADMIN LIST -->
-      <div id="pageAdmin" class="page">
-        <div class="pageHead">
-          <button id="backFromAdmin" class="btn ghost">← Назад</button>
-          <div class="h2">Админ</div>
-        </div>
-
-        <div class="card">
-          <div class="h2">Приглашения</div>
-          <div class="muted small">Сгенерированный код:</div>
-
-          <div class="inviteBox">
-            <div id="inviteCodeValue" class="inviteCode">—</div>
-            <button id="copyInviteBtn" class="btn primary">Скопировать</button>
-          </div>
-
-          <div class="grid" style="margin-top:12px">
-            <button id="inviteUserBtn" class="btn">+ User</button>
-            <button id="inviteAdminBtn" class="btn">+ Admin</button>
-          </div>
-        </div>
-
-
-        <div class="card">
-          <div class="h2">Пользователи</div>
-          <div id="adminUsers" class="list"></div>
-        </div>
-      </div>
-
-      <!-- ADMIN USER DETAIL -->
-      <div id="pageAdminUser" class="page">
-        <div class="pageHead">
-          <button id="backFromAdminUser" class="btn ghost">← Назад</button>
-          <div id="adminUserTitle" class="h2">Пользователь</div>
-        </div>
-
-        <div class="card">
-          <div class="h2">Тариф</div>
-          <div class="row" style="margin-top:8px">
-            <div class="muted">Текущий:</div>
-            <div id="adminTariffNow" class="badge">—</div>
-          </div>
-
-          <select id="adminTariffSelect" class="select"></select>
-          <button id="adminSaveTariff" class="btn primary" style="margin-top:10px">Сохранить тариф</button>
-          <div id="adminTariffErr" class="err" style="display:none"></div>
-        </div>
-
-        <div class="card">
-          <div class="h2">Баланс</div>
-          <div class="row" style="margin-top:8px">
-            <div class="muted">Текущий:</div>
-            <div id="adminBalanceNow" class="badge">—</div>
-          </div>
-
-          <input id="adminBalanceInput" class="input" placeholder="Новый баланс (число)" />
-          <button id="adminSaveBalance" class="btn primary" style="margin-top:10px">Сохранить баланс</button>
-          <div id="adminBalanceErr" class="err" style="display:none"></div>
-        </div>
-
-        <div class="card">
-          <div class="row">
-            <div class="h2">Коннекты пользователя</div>
-            <button id="addConnBtn" class="btn">+</button>
-          </div>
-          <div id="adminConfigs" class="list" style="margin-top:10px"></div>
-        </div>
-
-        <div class="card">
-          <button id="deleteUserBtn" class="btn danger">Удалить пользователя</button>
-        </div>
-      </div>
-
-    </div>
+<div id="notTelegram" class="center" style="display:none">
+  <div class="card">
+    <div class="h1">Ошибка запуска</div>
+    <div class="muted">Откройте приложение в Telegram.</div>
   </div>
 </div>
 
-<!-- SHEET (view config) -->
+<div id="inviteScreen" class="center" style="display:none">
+  <div class="card">
+    <div class="h1">Доступ отсутствует</div>
+    <div class="muted">Введите одноразовый код приглашения.</div>
+
+    <input id="inviteInput" class="input" placeholder="Код приглашения"/>
+    <button id="inviteBtn" class="btn primary" type="button">Авторизоваться</button>
+
+    <div id="inviteErr" class="err" style="display:none"></div>
+  </div>
+</div>
+
+<div id="app" class="app" style="display:none">
+  <!-- TOPBAR -->
+  <div id="topbar" class="topbar">
+    <div class="left">
+      <div id="avatar" class="avatar">U</div>
+      <button id="balanceBtn" class="balance" type="button">
+        <div class="muted small">Баланс</div>
+        <div id="balanceVal" class="balanceVal">—</div>
+      </button>
+    </div>
+
+    <div class="menu">
+      <button id="burger" class="burger" type="button" aria-label="menu">
+        <span></span><span></span><span></span>
+      </button>
+      <div id="dropdown" class="dropdown" style="display:none">
+        <button id="topupMenuBtn" class="dropBtn" type="button">Пополнить</button>
+        <button id="adminMenuBtn" class="dropBtn" type="button" style="display:none">Админ панель</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGES -->
+  <div class="pages">
+
+    <!-- HOME -->
+    <div id="pageHome" class="page page-active">
+      <div class="card">
+        <div class="row">
+          <div>
+            <div class="muted small">Тариф</div>
+            <div id="tariffName" class="h2">—</div>
+            <div id="tariffPrice" class="muted">—</div>
+          </div>
+          <div id="roleBadge" class="badge">—</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="h2">Подключения</div>
+        <div id="myConfigs" class="list"></div>
+      </div>
+    </div>
+
+    <!-- TOPUP -->
+    <div id="pageTopup" class="page">
+      <div class="pageHead">
+        <button id="backFromTopup" class="btn ghost" type="button">← Назад</button>
+        <div class="h2">Пополнение</div>
+      </div>
+
+      <div class="card">
+        <div class="grid">
+          <button class="btn" type="button">⭐️ За звезды</button>
+          <button class="btn" type="button">🪙 Крипта</button>
+          <button class="btn" type="button">🏦 Перевод</button>
+        </div>
+        <div class="muted small" style="margin-top:10px">Пока заглушки.</div>
+      </div>
+    </div>
+
+    <!-- ADMIN LIST -->
+    <div id="pageAdmin" class="page">
+      <div class="pageHead">
+        <button id="backFromAdmin" class="btn ghost" type="button">← Назад</button>
+        <div class="h2">Админ</div>
+      </div>
+
+      <div class="card">
+        <div class="h2">Приглашения</div>
+        <div class="muted small">Сгенерированный код:</div>
+
+        <div class="inviteBox">
+          <div id="inviteCodeValue" class="inviteCode">—</div>
+          <button id="copyInviteBtn" class="btn primary" type="button">Скопировать</button>
+        </div>
+
+        <div class="grid" style="margin-top:12px">
+          <button id="inviteUserBtn" class="btn" type="button">+ User</button>
+          <button id="inviteAdminBtn" class="btn" type="button">+ Admin</button>
+        </div>
+
+        <div id="inviteGenErr" class="err" style="display:none"></div>
+      </div>
+
+      <div class="card">
+        <div class="h2">Пользователи</div>
+        <div id="adminUsers" class="list"></div>
+      </div>
+    </div>
+
+    <!-- ADMIN USER -->
+    <div id="pageAdminUser" class="page">
+      <div class="pageHead">
+        <button id="backFromAdminUser" class="btn ghost" type="button">← Назад</button>
+        <div id="adminUserTitle" class="h2">Пользователь</div>
+      </div>
+
+      <div class="card">
+        <div class="h2">Тариф</div>
+        <div class="row" style="margin-top:8px">
+          <div class="muted">Текущий:</div>
+          <div id="adminTariffNow" class="badge">—</div>
+        </div>
+
+        <select id="adminTariffSelect" class="select"></select>
+        <button id="adminSaveTariff" class="btn primary" style="margin-top:10px" type="button">Сохранить тариф</button>
+        <div id="adminTariffErr" class="err" style="display:none"></div>
+      </div>
+
+      <div class="card">
+        <div class="h2">Баланс</div>
+        <div class="row" style="margin-top:8px">
+          <div class="muted">Текущий:</div>
+          <div id="adminBalanceNow" class="badge">—</div>
+        </div>
+
+        <input id="adminBalanceInput" class="input" placeholder="Новый баланс (число)"/>
+        <button id="adminSaveBalance" class="btn primary" style="margin-top:10px" type="button">Сохранить баланс</button>
+        <div id="adminBalanceErr" class="err" style="display:none"></div>
+      </div>
+
+      <div class="card">
+        <div class="row">
+          <div class="h2">Коннекты пользователя</div>
+          <button id="addConnBtn" class="btn" type="button">+</button>
+        </div>
+
+        <div id="adminConfigs" class="list" style="margin-top:10px"></div>
+      </div>
+
+      <div class="card">
+        <button id="deleteUserBtn" class="btn danger" type="button">Удалить пользователя</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- SHEET: view config -->
 <div id="sheetOverlay" class="overlay" style="display:none"></div>
 <div id="sheet" class="sheet" style="display:none">
   <div class="row">
     <div id="sheetTitle" class="h2">Конфиг</div>
-    <button id="closeSheet" class="btn ghost">✕</button>
+    <button id="closeSheet" class="btn ghost" type="button">✕</button>
   </div>
   <div id="qrWrap" class="qrWrap"></div>
   <div id="cfgTextBox" class="cfgBox">
-    <div class="muted small">Нажмите чтобы скопировать</div>
+    <div class="muted small">Нажмите, чтобы скопировать</div>
     <pre id="sheetText" class="pre"></pre>
   </div>
 </div>
 
-<!-- ADD CONFIG MODAL -->
+<!-- ADD CONFIG PANEL -->
 <div id="addModal" class="overlay" style="display:none"></div>
 <div id="addPanel" class="sheet" style="display:none">
   <div class="row">
     <div class="h2">Добавить коннект</div>
-    <button id="cancelAdd" class="btn ghost">✕</button>
+    <button id="cancelAdd" class="btn ghost" type="button">✕</button>
   </div>
 
   <textarea id="addText" class="textarea" placeholder="Вставь текст или сканируй QR"></textarea>
 
   <div class="grid" style="margin-top:10px">
-    <button id="scanBtn" class="btn">Сканировать QR</button>
-    <button id="saveBtn" class="btn primary">Сохранить</button>
+    <button id="scanBtn" class="btn" type="button">Сканировать QR</button>
+    <button id="saveBtn" class="btn primary" type="button">Сохранить</button>
   </div>
 
   <div id="addErr" class="err" style="display:none"></div>
@@ -210,7 +212,7 @@
 <div id="qrPanel" class="sheet" style="display:none">
   <div class="row">
     <div class="h2">Сканер QR</div>
-    <button id="closeQr" class="btn ghost">✕</button>
+    <button id="closeQr" class="btn ghost" type="button">✕</button>
   </div>
   <video id="qrVideo" class="video" playsinline></video>
   <canvas id="qrCanvas" style="display:none"></canvas>

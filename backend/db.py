@@ -2,7 +2,10 @@ import sqlite3
 from contextlib import contextmanager
 from datetime import datetime, timedelta
 
-from config import DB_PATH
+from config import DB_PATH, INVITE_TTL_DAYS
+
+def _now():
+    return datetime.utcnow().isoformat()
 
 @contextmanager
 def get_conn():
@@ -37,7 +40,8 @@ def init_db():
             role TEXT NOT NULL CHECK(role IN ('admin','user')),
             is_used INTEGER NOT NULL DEFAULT 0,
             used_by_tg_id INTEGER,
-            used_at TEXT
+            used_at TEXT,
+            created_at TEXT NOT NULL
         )
         """)
 
@@ -55,8 +59,9 @@ def init_db():
 
         conn.commit()
 
+# ---------- Users ----------
 def upsert_user(tg_user_id: int, first_name: str, username: str, role: str, balance: float, tariff_id: int):
-    now = datetime.utcnow().isoformat()
+    now = _now()
     with get_conn() as conn:
         c = conn.cursor()
         c.execute("""
@@ -86,48 +91,37 @@ def list_users():
 def set_user_balance(tg_user_id: int, balance: float):
     with get_conn() as conn:
         c = conn.cursor()
-        c.execute("UPDATE users SET balance_rub=? WHERE tg_user_id=?", (float(balance), tg_user_id))
+        c.execute("UPDATE users SET balance_rub=? WHERE tg_user_id=?", (float(balance), int(tg_user_id)))
         conn.commit()
 
 def set_user_tariff(tg_user_id: int, tariff_id: int):
     with get_conn() as conn:
         c = conn.cursor()
-        c.execute("UPDATE users SET tariff_id=? WHERE tg_user_id=?", (int(tariff_id), tg_user_id))
+        c.execute("UPDATE users SET tariff_id=? WHERE tg_user_id=?", (int(tariff_id), int(tg_user_id)))
         conn.commit()
 
 def delete_user(tg_user_id: int):
     with get_conn() as conn:
         c = conn.cursor()
-        c.execute("DELETE FROM user_configs WHERE tg_user_id=?", (tg_user_id,))
-        c.execute("DELETE FROM users WHERE tg_user_id=?", (tg_user_id,))
+        c.execute("DELETE FROM user_configs WHERE tg_user_id=?", (int(tg_user_id),))
+        c.execute("DELETE FROM users WHERE tg_user_id=?", (int(tg_user_id),))
         conn.commit()
 
+# ---------- Configs ----------
 def list_configs(tg_user_id: int):
     with get_conn() as conn:
         c = conn.cursor()
-        c.execute("SELECT * FROM user_configs WHERE tg_user_id=? ORDER BY id DESC", (tg_user_id,))
+        c.execute("SELECT * FROM user_configs WHERE tg_user_id=? ORDER BY id DESC", (int(tg_user_id),))
         return c.fetchall()
 
 def add_config(tg_user_id: int, title: str, config_text: str):
-    now = datetime.utcnow().isoformat()
     with get_conn() as conn:
         c = conn.cursor()
         c.execute("""
         INSERT INTO user_configs(tg_user_id, title, config_text, is_active, created_at)
         VALUES(?,?,?,?,?)
-        """, (tg_user_id, title, config_text, 1, now))
+        """, (int(tg_user_id), title, config_text, 1, _now()))
         conn.commit()
-
-def update_config(config_id: int, tg_user_id: int, title: str, config_text: str, is_active: int):
-    with get_conn() as conn:
-        c = conn.cursor()
-        c.execute("""
-        UPDATE user_configs
-        SET title=?, config_text=?, is_active=?
-        WHERE id=? AND tg_user_id=?
-        """, (title, config_text, int(is_active), int(config_id), int(tg_user_id)))
-        conn.commit()
-        return c.rowcount  # важно для отладки
 
 def delete_config(config_id: int, tg_user_id: int):
     with get_conn() as conn:
@@ -136,13 +130,26 @@ def delete_config(config_id: int, tg_user_id: int):
         conn.commit()
         return c.rowcount
 
-def create_invite(code: str, role: str):
+# ---------- Invites: one-time + TTL ----------
+def cleanup_invites():
+    cutoff = (datetime.utcnow() - timedelta(days=INVITE_TTL_DAYS)).isoformat()
     with get_conn() as conn:
         c = conn.cursor()
-        c.execute("INSERT INTO invites(code, role, is_used) VALUES(?,?,0)", (code, role))
+        c.execute("DELETE FROM invites WHERE is_used=0 AND created_at < ?", (cutoff,))
+        conn.commit()
+
+def create_invite(code: str, role: str):
+    cleanup_invites()
+    with get_conn() as conn:
+        c = conn.cursor()
+        c.execute(
+            "INSERT INTO invites(code, role, is_used, created_at) VALUES(?,?,0,?)",
+            (code, role, _now())
+        )
         conn.commit()
 
 def redeem_invite(code: str, used_by_tg_id: int):
+    cleanup_invites()
     with get_conn() as conn:
         c = conn.cursor()
         c.execute("SELECT * FROM invites WHERE code=? AND is_used=0", (code,))
@@ -150,8 +157,9 @@ def redeem_invite(code: str, used_by_tg_id: int):
         if not row:
             return None
         c.execute("""
-        UPDATE invites SET is_used=1, used_by_tg_id=?, used_at=?
+        UPDATE invites
+        SET is_used=1, used_by_tg_id=?, used_at=?
         WHERE id=?
-        """, (used_by_tg_id, datetime.utcnow().isoformat(), row["id"]))
+        """, (int(used_by_tg_id), _now(), int(row["id"])))
         conn.commit()
         return row
