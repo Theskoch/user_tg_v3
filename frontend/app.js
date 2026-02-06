@@ -319,20 +319,12 @@ function addAdminButton() {
   if (!menu) return;
   if (document.getElementById("adminBtn")) return;
 
-  const btn = document.createElement("button");
+  const btn = document.createElement("a");
   btn.id = "adminBtn";
+  btn.href = "/admin.html";
   btn.className = "dropdown-btn";
-  btn.type = "button";
-  btn.textContent = "Админ-консоль";
+  btn.textContent = "Администратор";
   addPressFx(btn);
-
-  btn.onclick = () => {
-    el("dropdown").style.display = "none";
-    openAdminConsole().catch(err => {
-      console.error(err);
-      toast("Ошибка админки");
-    });
-  };
 
   // небольшой отступ чтобы не слипалось с "Пополнить"
   const spacer = document.createElement("div");

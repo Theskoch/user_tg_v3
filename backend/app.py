@@ -257,6 +257,32 @@ def index():
 def frontend_files(filename: str):
     return send_from_directory(FRONTEND_DIR, filename)
 
+@app.post("/api/check-admin-auth")
+def api_check_admin_auth():
+    tg_user = get_tg_user_from_request()
+    tg_id = int(tg_user["id"])
+    is_admin_user = is_admin(tg_id)
+    return jsonify({"isAdmin": is_admin_user})
+
+@app.post("/api/admin-content")
+def api_admin_content():
+    tg_user = get_tg_user_from_request()
+    tg_id = int(tg_user["id"])
+    require_admin(tg_id)
+
+    users = admin_list_users()
+    tariffs = load_tariffs()
+
+    return jsonify({
+        "users": [
+            {
+                "name": user.get('first_name', '') + ' ' + user.get('username', ''),
+                "tg_id": user.get('tg_user_id')
+            } for user in users
+        ],
+        "tariffs": tariffs
+    })
+
 def sanity():
     if not FRONTEND_DIR.exists():
         raise RuntimeError(f"FRONTEND_DIR not found: {FRONTEND_DIR}")
