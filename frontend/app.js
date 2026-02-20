@@ -15,7 +15,6 @@ const userBalance = document.getElementById('user-balance');
 const userTariffName = document.getElementById('user-tariff-name');
 const userTariffUntil = document.getElementById('user-tariff-until');
 const adminBtn = document.getElementById('admin-btn');
-const debugPanel = document.getElementById('debug-panel');
 const menuToggle = document.getElementById('menu-toggle');
 const sideMenu = document.getElementById('side-menu');
 const replenishBtn = document.getElementById('replenish-btn');
@@ -128,10 +127,6 @@ loginBtn.addEventListener('click', async () => {
     }
     
     try {
-        if (debugPanel) {
-            debugPanel.style.display = 'block';
-            debugPanel.textContent = `tg.initData=${tg?.initData || 'EMPTY'}\nuser=${JSON.stringify(tg?.initDataUnsafe?.user || {})}`;
-        }
         // Prepare telegram user data
         if (!tg || !tg.initDataUnsafe || !tg.initDataUnsafe.user) {
             errorMessage.textContent = 'Откройте приложение из Telegram';
@@ -158,16 +153,10 @@ loginBtn.addEventListener('click', async () => {
             })
         });
 
-        if (debugPanel) {
-            debugPanel.textContent += `\nstatus=${response.status}`;
-        }
 
         // Parse response
         const data = await response.json();
 
-        if (debugPanel) {
-            debugPanel.textContent += `\nresp=${JSON.stringify(data)}`;
-        }
 
         // Handle authentication result
         if (data.success) {
@@ -208,9 +197,6 @@ loginBtn.addEventListener('click', async () => {
     } catch (error) {
         console.error('Authentication error:', error);
         errorMessage.textContent = error?.message || 'Ошибка авторизации. Попробуйте позже.';
-        if (debugPanel) {
-            debugPanel.textContent += `\nerror=${error?.message || String(error)}`;
-        }
     }
 });
 
@@ -420,11 +406,13 @@ function openSheet(conn) {
   }
   sheetOverlay.classList.remove('hidden');
   sheet.classList.remove('hidden');
+  requestAnimationFrame(() => sheet.classList.add('show'));
 }
 
 function closeSheet() {
+  sheet?.classList.remove('show');
   sheetOverlay?.classList.add('hidden');
-  sheet?.classList.add('hidden');
+  setTimeout(() => sheet?.classList.add('hidden'), 250);
   CURRENT_OPEN_CONFIG = null;
 }
 
@@ -635,13 +623,15 @@ function openAddSheet() {
   qrScanned = false;
   addOverlay?.classList.remove('hidden');
   addSheet?.classList.remove('hidden');
+  requestAnimationFrame(() => addSheet?.classList.add('show'));
   startQr();
   loadConnectionTypes();
 }
 
 function closeAddSheet() {
+  addSheet?.classList.remove('show');
   addOverlay?.classList.add('hidden');
-  addSheet?.classList.add('hidden');
+  setTimeout(() => addSheet?.classList.add('hidden'), 250);
   stopQr();
 }
 
