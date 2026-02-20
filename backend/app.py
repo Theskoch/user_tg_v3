@@ -189,6 +189,10 @@ def ensure_schema():
     try:
         res = db.session.execute(text("PRAGMA table_info(configs)"))
         cols = {row[1] for row in res}
+        if 'name' not in cols:
+            db.session.execute(text("ALTER TABLE configs ADD COLUMN name VARCHAR"))
+        if 'protocol' not in cols:
+            db.session.execute(text("ALTER TABLE configs ADD COLUMN protocol VARCHAR"))
         if 'is_used' not in cols:
             db.session.execute(text("ALTER TABLE configs ADD COLUMN is_used BOOLEAN DEFAULT 0"))
             db.session.commit()
@@ -473,6 +477,30 @@ def user_config_mark_used():
     item.is_used = True
     db.session.commit()
     return jsonify({'ok': True})
+
+@app.route('/api/configs/update_name', methods=['POST'])
+def user_config_update_name():
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'error': 'Not authenticated'}), 401
+    data = request.json or {}
+    config_id = data.get('config_id')
+    name = (data.get('name') or '').strip()
+    try:
+        config_id = int(config_id)
+    except Exception:
+        return jsonify({'error': 'Bad config id'}), 400
+    item = ConfigItem.query.get(config_id)
+    if not item:
+        return jsonify({'error': 'Not found'}), 404
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    if (item.user_id != user_id) and (not user.is_admin):
+        return jsonify({'error': 'Unauthorized'}), 403
+    item.name = name or item.name or 'Config'
+    db.session.commit()
+    return jsonify({'ok': True, 'name': item.name})
 
 @app.route('/user', methods=['GET'])
 def get_user():

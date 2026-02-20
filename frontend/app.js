@@ -34,6 +34,7 @@ const connectionsBox = document.getElementById('connections');
 const sheet = document.getElementById('sheet');
 const sheetOverlay = document.getElementById('sheet-overlay');
 const sheetTitle = document.getElementById('sheet-title');
+let CURRENT_OPEN_CONFIG = null;
 const sheetText = document.getElementById('sheet-text');
 const sheetQr = document.getElementById('sheet-qr');
 const copyConfigBtn = document.getElementById('copy-config');
@@ -61,6 +62,7 @@ const addOverlay = document.getElementById('add-overlay');
 const addSheet = document.getElementById('add-sheet');
 const addText = document.getElementById('add-text');
 const addType = document.getElementById('add-type');
+const addName = document.getElementById('add-name');
 const addSave = document.getElementById('add-save');
 const addCancel = document.getElementById('add-cancel');
 const qrVideo = document.getElementById('qr-video');
@@ -370,7 +372,7 @@ async function markUsedAndOpen(c) {
     await apiPost(`${API_URL}/api/configs/mark_used`, { config_id: c.id });
   } catch {}
   await renderConnections();
-  openSheet({ name: c.name || c.title, text: c.config_text });
+  openSheet({ id: c.id, name: c.name || c.title, text: c.config_text });
 }
 
 let warnConfig = null;
@@ -396,14 +398,16 @@ warnOverlay?.addEventListener('click', () => {
 
 warnView?.addEventListener('click', () => {
   if (warnConfig) {
-    openSheet({ name: warnConfig.name || warnConfig.title, text: warnConfig.config_text });
+    openSheet({ id: warnConfig.id, name: warnConfig.name || warnConfig.title, text: warnConfig.config_text });
   }
   closeWarnSheet();
 });
 
 function openSheet(conn) {
   if (!sheet || !sheetOverlay) return;
+  CURRENT_OPEN_CONFIG = conn;
   sheetTitle.textContent = conn.name;
+  sheetTitle.setAttribute('contenteditable', 'true');
   sheetText.textContent = conn.text;
   if (sheetQr) {
     sheetQr.innerHTML = '';
@@ -420,6 +424,7 @@ function openSheet(conn) {
 function closeSheet() {
   sheetOverlay?.classList.add('hidden');
   sheet?.classList.add('hidden');
+  CURRENT_OPEN_CONFIG = null;
 }
 
 sheetOverlay?.addEventListener('click', closeSheet);
@@ -442,6 +447,22 @@ copyConfigBtn?.addEventListener('click', async () => {
       document.body.removeChild(ta);
     }
   } catch {}
+});
+
+let nameSaveTimer = null;
+sheetTitle?.addEventListener('input', () => {
+  if (!CURRENT_OPEN_CONFIG) return;
+  if (nameSaveTimer) clearTimeout(nameSaveTimer);
+  nameSaveTimer = setTimeout(async () => {
+    const newName = sheetTitle.textContent?.trim() || 'Config';
+    try {
+      await apiPost(`${API_URL}/api/configs/update_name`, {
+        config_id: CURRENT_OPEN_CONFIG.id,
+        name: newName
+      });
+      await renderConnections();
+    } catch {}
+  }, 600);
 });
 
 // Admin logic
@@ -524,7 +545,7 @@ async function loadAdminConfigs() {
       </div>
     `;
     const [openBtn, delBtn] = card.querySelectorAll('button');
-    openBtn.addEventListener('click', () => openSheet({ name: c.name || c.title, text: c.config_text }));
+    openBtn.addEventListener('click', () => openSheet({ id: c.id, name: c.name || c.title, text: c.config_text }));
     delBtn.addEventListener('click', async () => {
       await apiPost(`${API_URL}/api/admin/configs/delete`, { config_id: c.id });
       await loadAdminConfigs();
@@ -585,6 +606,7 @@ addSave?.addEventListener('click', async () => {
   await apiPost(`${API_URL}/api/admin/configs/add`, {
     target_user_id: ADMIN_SELECTED.id,
     title: 'Config',
+    name: addName?.value?.trim() || 'Config',
     config_text: txt,
     protocol: addType?.value || null
   });
@@ -599,6 +621,7 @@ let qrScanned = false;
 
 function openAddSheet() {
   addText.value = '';
+  if (addName) addName.value = 'Config';
   if (addType) addType.value = '';
   qrScanned = false;
   addOverlay?.classList.remove('hidden');
