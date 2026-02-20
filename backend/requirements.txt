@@ -4,3 +4,5 @@ python-telegram-bot
 telebot
 flask-cors
 python-dotenv
+Werkzeug
+gunicorn

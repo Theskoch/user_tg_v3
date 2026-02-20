@@ -5,11 +5,22 @@ from flask_cors import CORS
 from config import Config
 from db import db, User
 import telebot
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 app = Flask(__name__)
 app.config.from_object(Config)
-CORS(app)
+
+# Configure for Nginx proxy
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
+
+# More permissive CORS
+CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 db.init_app(app)
+
+# Configure session to work behind proxy
+app.config['SESSION_COOKIE_SECURE'] = True
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
 # Telegram Bot Setup
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
