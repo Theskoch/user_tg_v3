@@ -60,10 +60,12 @@ const adminInitialUser = document.getElementById('user-initial-admin-user');
 const addOverlay = document.getElementById('add-overlay');
 const addSheet = document.getElementById('add-sheet');
 const addText = document.getElementById('add-text');
+const addType = document.getElementById('add-type');
 const addSave = document.getElementById('add-save');
 const addCancel = document.getElementById('add-cancel');
 const qrVideo = document.getElementById('qr-video');
 const qrCanvas = document.getElementById('qr-canvas');
+const qrRescan = document.getElementById('qr-rescan');
 const warnOverlay = document.getElementById('warn-overlay');
 const warnSheet = document.getElementById('warn-sheet');
 const warnView = document.getElementById('warn-view');
@@ -307,22 +309,44 @@ async function loadDownloads() {
   }
 }
 
+let CONNECTION_TYPES = [];
+async function fetchConnectionTypes() {
+  try {
+    const r = await fetch(`${API_URL}/connection_types.json`);
+    const data = await r.json();
+    CONNECTION_TYPES = data.types || [];
+  } catch {
+    CONNECTION_TYPES = [];
+  }
+}
+
+function resolveType(protocol) {
+  if (!protocol) return null;
+  return CONNECTION_TYPES.find(t => t.id === protocol || t.name?.toLowerCase() === String(protocol).toLowerCase());
+}
+
 // Connections placeholder
 async function renderConnections() {
   if (!connectionsBox) return;
   connectionsBox.innerHTML = '';
   try {
     const configs = await apiGet(`${API_URL}/api/configs`);
+    if (!CONNECTION_TYPES.length) await fetchConnectionTypes();
     if (!configs.length) {
       connectionsBox.innerHTML = '<div class="conn-sub">Нет подключений</div>';
       return;
     }
     configs.forEach(c => {
+      const type = resolveType(c.protocol);
+      const typeBadge = type
+        ? `<span class="type-badge" style="background:${type.bg}; color:${type.text};">${type.name}</span>`
+        : '';
       const card = document.createElement('div');
       card.className = 'conn-card';
       if (c.is_used) card.classList.add('used');
       card.innerHTML = `
         <div class="conn-title">${c.name || c.title || 'Config'}</div>
+        ${typeBadge}
         <div class="conn-sub">${(c.protocol || '—')} • ${String(c.config_text || '').slice(0, 18)}...</div>
       `;
       card.addEventListener('click', () => handleConfigOpen(c));
@@ -561,7 +585,8 @@ addSave?.addEventListener('click', async () => {
   await apiPost(`${API_URL}/api/admin/configs/add`, {
     target_user_id: ADMIN_SELECTED.id,
     title: 'Config',
-    config_text: txt
+    config_text: txt,
+    protocol: addType?.value || null
   });
   closeAddSheet();
   await loadAdminConfigs();
@@ -570,12 +595,16 @@ addSave?.addEventListener('click', async () => {
 
 let qrStream = null;
 let qrScanTimer = null;
+let qrScanned = false;
 
 function openAddSheet() {
   addText.value = '';
+  if (addType) addType.value = '';
+  qrScanned = false;
   addOverlay?.classList.remove('hidden');
   addSheet?.classList.remove('hidden');
   startQr();
+  loadConnectionTypes();
 }
 
 function closeAddSheet() {
@@ -590,6 +619,7 @@ async function startQr() {
     qrStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
     qrVideo.srcObject = qrStream;
     await qrVideo.play();
+    qrScanned = false;
     scanQrLoop();
   } catch (e) {
     // no camera
@@ -602,10 +632,12 @@ function stopQr() {
     qrStream.getTracks().forEach(t => t.stop());
     qrStream = null;
   }
+  qrScanned = false;
 }
 
 function scanQrLoop() {
   if (!qrVideo || !qrCanvas) return;
+  if (qrScanned) return;
   const ctx = qrCanvas.getContext('2d');
   qrCanvas.width = qrVideo.videoWidth || 320;
   qrCanvas.height = qrVideo.videoHeight || 240;
@@ -614,9 +646,16 @@ function scanQrLoop() {
   const code = window.jsQR ? window.jsQR(img.data, img.width, img.height) : null;
   if (code && code.data) {
     addText.value = code.data;
+    qrScanned = true;
+    stopQr();
+    return;
   }
   qrScanTimer = requestAnimationFrame(scanQrLoop);
 }
+
+qrRescan?.addEventListener('click', () => {
+  startQr();
+});
 
 adminUserDelete?.addEventListener('click', async () => {
   if (!ADMIN_SELECTED) return;

@@ -1,0 +1,16 @@
+{
+  "types": [
+    {
+      "id": "wg",
+      "name": "WG",
+      "bg": "#ff5d5d",
+      "text": "#ffffff"
+    },
+    {
+      "id": "vless",
+      "name": "VLESS",
+      "bg": "#41c36f",
+      "text": "#ffffff"
+    }
+  ]
+}
