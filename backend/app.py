@@ -1,14 +1,12 @@
 import os
 import secrets
+from datetime import datetime, timedelta
 from flask import Flask, request, jsonify, session, send_from_directory
 from flask_cors import CORS
 from config import Config
 from db import db, User, OneTimeCode
 import telebot
 from werkzeug.middleware.proxy_fix import ProxyFix
-import os
-from datetime import datetime, timedelta
-import secrets
 
 # Determine project root
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -45,29 +43,42 @@ app.config['SESSION_COOKIE_SECURE'] = False
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
 bot = telebot.TeleBot(BOT_TOKEN)
 
-# First-time admin code generation
-FIRST_TIME_ADMIN_CODE = Config.FIRST_TIME_ADMIN_CODE
-print(f"FIRST TIME ADMIN CODE: {FIRST_TIME_ADMIN_CODE}")
+def ensure_first_admin_code():
+    """Ensure a one-time admin code exists. Print it once on startup."""
+    existing_admin_code = OneTimeCode.query.filter_by(is_admin=True, used_at=None).first()
+    if existing_admin_code:
+        print(f"FIRST TIME ADMIN CODE: {existing_admin_code.code}")
+        return
+
+    # Create a new one-time admin code
+    code = secrets.token_urlsafe(8)
+    new_code = OneTimeCode(code=code, is_admin=True)
+    db.session.add(new_code)
+    db.session.commit()
+    print(f"FIRST TIME ADMIN CODE: {code}")
 
 @app.route('/auth', methods=['POST'])
 def authenticate():
     data = request.json
     code = data.get('code')
     telegram_data = data.get('telegram_user')
+
+    if not telegram_data or not telegram_data.get('id'):
+        return jsonify({'success': False, 'message': 'Нет данных Telegram'}), 400
     
     # Validate one-time code
     one_time_code = OneTimeCode.query.filter_by(code=code).first()
     
     if not one_time_code:
-        return jsonify({'success': False, 'message': 'Invalid code'})
+        return jsonify({'success': False, 'message': 'Неверный код'})
     
     # Check if code is already used
     if one_time_code.used_at:
-        return jsonify({'success': False, 'message': 'Code already used'})
+        return jsonify({'success': False, 'message': 'Код уже использован'})
     
     # Check code expiration (1 hour)
     if one_time_code.created_at < datetime.utcnow() - timedelta(hours=1):
-        return jsonify({'success': False, 'message': 'Code expired'})
+        return jsonify({'success': False, 'message': 'Код просрочен'})
     
     # Create user
     existing_user = User.query.filter_by(telegram_id=telegram_data['id']).first()
@@ -92,9 +103,11 @@ def authenticate():
     # Create session
     session['user_id'] = user_id
     
+    user = User.query.get(user_id)
     return jsonify({
-        'success': True, 
-        'is_admin': one_time_code.is_admin
+        'success': True,
+        'is_admin': one_time_code.is_admin,
+        'user': user.to_dict() if user else None
     })
 
 @app.route('/generate_code', methods=['POST'])
@@ -148,4 +161,5 @@ def admin_panel():
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-    app.run(debug=True)
+        ensure_first_admin_code()
+    app.run(host='0.0.0.0', port=5000, debug=True)

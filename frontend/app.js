@@ -1,6 +1,8 @@
 // Telegram Web App initialization
-const tg = window.Telegram.WebApp;
-tg.ready();
+const tg = window.Telegram?.WebApp;
+if (tg) {
+  tg.ready();
+}
 
 // Page elements
 const loginPage = document.getElementById('login-page');
@@ -30,6 +32,11 @@ loginBtn.addEventListener('click', async () => {
     
     try {
         // Prepare telegram user data
+        if (!tg || !tg.initDataUnsafe || !tg.initDataUnsafe.user) {
+            errorMessage.textContent = 'Откройте приложение из Telegram';
+            return;
+        }
+
         const telegramUser = {
             id: tg.initDataUnsafe.user.id,
             username: tg.initDataUnsafe.user.username,
@@ -66,8 +73,7 @@ loginBtn.addEventListener('click', async () => {
                 : 'U';
             
             // Fetch and set user details
-            const userResponse = await fetch(`${API_URL}/user`);
-            const userData = await userResponse.json();
+            const userData = data.user ? data.user : await (await fetch(`${API_URL}/user`)).json();
             
             // Set balance
             userBalance.textContent = `${userData.balance.toFixed(2)} ₽`;
@@ -77,7 +83,6 @@ loginBtn.addEventListener('click', async () => {
                 adminBtn.classList.remove('hidden');
             }
         } else {
-            // Show error message
             errorMessage.textContent = data.message || 'Неверный код доступа';
         }
     } catch (error) {
