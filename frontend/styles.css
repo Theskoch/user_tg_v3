@@ -126,7 +126,7 @@ header {
 .balance {
     font-size: 18px;
     font-weight: 700;
-    background: rgba(255,255,255,0.06);
+    background: rgba(255,255,255,0.12);
     padding: 8px 12px;
     border-radius: 12px;
     border: 1px solid rgba(255,255,255,0.12);
@@ -340,7 +340,7 @@ button:active,
 }
 
 .sheet-text {
-    background: rgba(255,255,255,0.06);
+    background: rgba(255,255,255,0.12);
     border-radius: 12px;
     padding: 10px 12px;
     font-size: 12px;
@@ -352,9 +352,15 @@ button:active,
 
 select.sheet-text, input.sheet-text {
     color: #fff;
-    background: rgba(255,255,255,0.06);
+    background: rgba(255,255,255,0.12);
     border: 1px solid rgba(255,255,255,0.1);
     padding: 10px 12px;
+    min-height: 42px;
+}
+
+#add-type.sheet-text {
+    min-height: 48px;
+    font-size: 14px;
 }
 
 .sheet-text-row {
