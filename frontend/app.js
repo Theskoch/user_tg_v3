@@ -157,7 +157,7 @@ loginBtn.addEventListener('click', async () => {
         }
     } catch (error) {
         console.error('Authentication error:', error);
-        errorMessage.textContent = 'Ошибка авторизации. Попробуйте позже.';
+        errorMessage.textContent = error?.message || 'Ошибка авторизации. Попробуйте позже.';
         if (debugPanel) {
             debugPanel.textContent += `\nerror=${error?.message || String(error)}`;
         }
