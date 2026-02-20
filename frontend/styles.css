@@ -342,7 +342,7 @@ button:active,
     height: 180px;
     width: 180px;
     margin: 12px auto;
-    background: rgba(255,255,255,0.06);
+    background: rgba(16,18,24,0.8);
     border-radius: 16px;
     border: 2px solid rgba(65,195,111,0.9);
     box-shadow: 0 0 0 3px rgba(65,195,111,0.22), 0 0 18px rgba(65,195,111,0.45);
@@ -352,11 +352,14 @@ button:active,
     font-size: 12px;
     color: rgba(255,255,255,0.6);
     overflow: hidden;
+    padding: 10px;
 }
 
 .sheet-qr canvas,
 .sheet-qr img {
     border-radius: 12px;
+    width: 100% !important;
+    height: 100% !important;
 }
 
 .copy-toast {
