@@ -13,6 +13,7 @@ const errorMessage = document.getElementById('error-message');
 const userInitial = document.getElementById('user-initial');
 const userBalance = document.getElementById('user-balance');
 const adminBtn = document.getElementById('admin-btn');
+const debugPanel = document.getElementById('debug-panel');
 
 // API URL
 const API_URL = window.location.origin;
@@ -31,6 +32,10 @@ loginBtn.addEventListener('click', async () => {
     }
     
     try {
+        if (debugPanel) {
+            debugPanel.style.display = 'block';
+            debugPanel.textContent = `tg.initData=${tg?.initData || 'EMPTY'}\nuser=${JSON.stringify(tg?.initDataUnsafe?.user || {})}`;
+        }
         // Prepare telegram user data
         if (!tg || !tg.initDataUnsafe || !tg.initDataUnsafe.user) {
             errorMessage.textContent = 'Откройте приложение из Telegram';
@@ -56,8 +61,16 @@ loginBtn.addEventListener('click', async () => {
             })
         });
 
+        if (debugPanel) {
+            debugPanel.textContent += `\nstatus=${response.status}`;
+        }
+
         // Parse response
         const data = await response.json();
+
+        if (debugPanel) {
+            debugPanel.textContent += `\nresp=${JSON.stringify(data)}`;
+        }
 
         // Handle authentication result
         if (data.success) {
@@ -88,5 +101,8 @@ loginBtn.addEventListener('click', async () => {
     } catch (error) {
         console.error('Authentication error:', error);
         errorMessage.textContent = 'Ошибка авторизации. Попробуйте позже.';
+        if (debugPanel) {
+            debugPanel.textContent += `\nerror=${error?.message || String(error)}`;
+        }
     }
 });

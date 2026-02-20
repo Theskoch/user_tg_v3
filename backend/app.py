@@ -63,6 +63,11 @@ def authenticate():
     code = data.get('code')
     telegram_data = data.get('telegram_user')
 
+    # Debug logs
+    print("/auth called")
+    print("code:", code)
+    print("telegram_data:", telegram_data)
+
     if not telegram_data or not telegram_data.get('id'):
         return jsonify({'success': False, 'message': 'Нет данных Telegram'}), 400
     
