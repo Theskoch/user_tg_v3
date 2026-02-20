@@ -123,6 +123,24 @@ def run_billing_cycle():
 
     db.session.commit()
 
+def recalc_user_tariff(user: User):
+    if not user or not user.tariff_id:
+        return
+    tariffs = {t['id']: t for t in load_tariffs()}
+    t = tariffs.get(user.tariff_id)
+    if not t:
+        return
+    now = datetime.utcnow()
+    price = float(t.get('price_rub') or 0)
+    months = int(t.get('period_months') or 1)
+    if not user.tariff_next_charge_at:
+        user.tariff_next_charge_at = now
+    if user.balance >= price and (not user.tariff_paid_until or user.tariff_next_charge_at <= now):
+        user.balance -= price
+        user.tariff_paid_until = add_months(user.tariff_next_charge_at or now, months)
+        user.tariff_next_charge_at = user.tariff_paid_until
+        user.last_overdue_admin_at = None
+
 def billing_loop():
     while True:
         try:
@@ -359,6 +377,8 @@ def admin_set_balance():
         user.balance = float(balance)
     except Exception:
         return jsonify({'error': 'Bad balance'}), 400
+    # immediately recalc tariff after top-up
+    recalc_user_tariff(user)
     db.session.commit()
     return jsonify({'ok': True})
 

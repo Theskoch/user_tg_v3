@@ -1,0 +1,14 @@
+{
+  "items": [
+    {
+      "title": "Windows",
+      "url": "https://example.com/windows-download",
+      "icon": "/assets/downloads/windows.svg"
+    },
+    {
+      "title": "Android",
+      "url": "https://example.com/android-download",
+      "icon": "/assets/downloads/android.svg"
+    }
+  ]
+}

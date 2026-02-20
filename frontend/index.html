@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Telegram Mini App</title>
-    <link rel="stylesheet" href="styles.css?v=2026-02-20-6">
+    <link rel="stylesheet" href="styles.css?v=2026-02-20-7">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
@@ -38,6 +38,7 @@
 
         <div id="side-menu" class="side-menu hidden">
             <button id="replenish-btn">Пополнить</button>
+            <button id="download-btn">Скачать приложение</button>
             <button id="admin-btn" class="hidden">Администратор</button>
         </div>
 
@@ -68,6 +69,19 @@
         </div>
     </div>
 
+    <div id="download-page" class="page hidden">
+        <header>
+            <div class="user-avatar" id="user-initial-download"></div>
+            <div class="balance">Загрузки</div>
+            <button id="download-back" class="icon-btn" type="button">←</button>
+        </header>
+
+        <div class="card glass">
+            <h3>Скачать приложение</h3>
+            <div id="download-list" class="connections-grid"></div>
+        </div>
+    </div>
+
     <div id="sheet-overlay" class="sheet-overlay hidden"></div>
     <div id="sheet" class="sheet hidden">
         <div class="sheet-handle"></div>
@@ -89,12 +103,12 @@
     <div id="add-sheet" class="sheet hidden">
         <div class="sheet-handle"></div>
         <h4>Добавить конфиг</h4>
-        <textarea id="add-text" class="sheet-text" rows="4" placeholder="Вставьте конфиг"></textarea>
         <div class="card glass" style="margin:8px 0;">
             <div class="conn-sub">Сканер QR</div>
             <video id="qr-video" style="width:100%; border-radius:12px; margin-top:8px;"></video>
             <canvas id="qr-canvas" class="hidden"></canvas>
         </div>
+        <textarea id="add-text" class="sheet-text" rows="4" placeholder="Вставьте конфиг"></textarea>
         <button id="add-save" class="btn">Сохранить</button>
         <button id="add-cancel" class="btn ghost">Отмена</button>
     </div>
@@ -161,6 +175,6 @@
         <button id="admin-user-delete" class="btn ghost">Удалить пользователя</button>
     </div>
 
-    <script src="app.js?v=2026-02-20-19"></script>
+    <script src="app.js?v=2026-02-20-21"></script>
 </body>
 </html>

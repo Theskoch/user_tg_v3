@@ -19,8 +19,13 @@ const debugPanel = document.getElementById('debug-panel');
 const menuToggle = document.getElementById('menu-toggle');
 const sideMenu = document.getElementById('side-menu');
 const replenishBtn = document.getElementById('replenish-btn');
+const downloadBtn = document.getElementById('download-btn');
 const topupPage = document.getElementById('topup-page');
 const topupBack = document.getElementById('topup-back');
+const downloadPage = document.getElementById('download-page');
+const downloadBack = document.getElementById('download-back');
+const downloadList = document.getElementById('download-list');
+const userInitialDownload = document.getElementById('user-initial-download');
 const userInitialTopup = document.getElementById('user-initial-topup');
 const userBalanceTopup = document.getElementById('user-balance-topup');
 const userTariffNameTopup = document.getElementById('user-tariff-name-topup');
@@ -242,6 +247,16 @@ if (replenishBtn && topupPage) {
   });
 }
 
+if (downloadBtn && downloadPage) {
+  downloadBtn.addEventListener('click', async () => {
+    userPage.classList.add('hidden');
+    downloadPage.classList.remove('hidden');
+    sideMenu?.classList.add('hidden');
+    if (userInitialDownload) userInitialDownload.textContent = userInitial.textContent || 'U';
+    await loadDownloads();
+  });
+}
+
 if (userBalance && topupPage) {
   userBalance.addEventListener('click', () => {
     userPage.classList.add('hidden');
@@ -254,6 +269,42 @@ if (topupBack) {
     topupPage.classList.add('hidden');
     userPage.classList.remove('hidden');
   });
+}
+
+if (downloadBack) {
+  downloadBack.addEventListener('click', () => {
+    downloadPage.classList.add('hidden');
+    userPage.classList.remove('hidden');
+  });
+}
+
+async function loadDownloads() {
+  if (!downloadList) return;
+  downloadList.innerHTML = '';
+  try {
+    const r = await fetch(`${API_URL}/downloads.json`);
+    const data = await r.json();
+    const items = data.items || [];
+    if (!items.length) {
+      downloadList.innerHTML = '<div class="conn-sub">Нет ссылок</div>';
+      return;
+    }
+    items.forEach(item => {
+      const card = document.createElement('button');
+      card.className = 'download-card';
+      card.type = 'button';
+      card.innerHTML = `
+        <img src="${item.icon}" alt="" />
+        <span>${item.title}</span>
+      `;
+      card.addEventListener('click', () => {
+        if (item.url) window.open(item.url, '_blank');
+      });
+      downloadList.appendChild(card);
+    });
+  } catch {
+    downloadList.innerHTML = '<div class="conn-sub">Ошибка загрузки</div>';
+  }
 }
 
 // Connections placeholder
