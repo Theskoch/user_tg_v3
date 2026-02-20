@@ -312,7 +312,7 @@ async function loadDownloads() {
 let CONNECTION_TYPES = [];
 async function fetchConnectionTypes() {
   try {
-    const r = await fetch(`${API_URL}/connection_types.json`);
+    const r = await fetch(`${API_URL}/connection_types.json`, { cache: 'no-store' });
     const data = await r.json();
     CONNECTION_TYPES = data.types || [];
   } catch {
