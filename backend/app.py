@@ -7,6 +7,7 @@ from config import Config
 from db import db, User, OneTimeCode, ConfigItem
 import telebot
 from werkzeug.middleware.proxy_fix import ProxyFix
+from sqlalchemy import text
 
 # Determine project root
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -66,6 +67,18 @@ def ensure_first_admin_code():
     db.session.add(new_code)
     db.session.commit()
     print(f"FIRST TIME ADMIN CODE: {code}")
+
+def ensure_schema():
+    """Lightweight migration to add missing columns/tables for sqlite."""
+    # ensure users.tariff_id exists
+    try:
+        res = db.session.execute(text("PRAGMA table_info(users)"))
+        cols = {row[1] for row in res}
+        if 'tariff_id' not in cols:
+            db.session.execute(text("ALTER TABLE users ADD COLUMN tariff_id INTEGER"))
+            db.session.commit()
+    except Exception:
+        db.session.rollback()
 
 @app.route('/auth', methods=['POST'])
 def authenticate():
