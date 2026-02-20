@@ -332,6 +332,11 @@ button:active,
     transition: transform 0.25s ease, opacity 0.25s ease;
 }
 
+#warn-sheet {
+    display: block;
+    z-index: 70;
+}
+
 .sheet.show {
     transform: translateY(0);
     opacity: 1;
