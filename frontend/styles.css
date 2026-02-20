@@ -8,6 +8,13 @@ body {
     background: radial-gradient(1200px 800px at 10% -10%, #2a2f3a 0%, rgba(18,19,24,0.95) 55%),
                 radial-gradient(1000px 600px at 100% 0%, rgba(64,83,255,0.25) 0%, rgba(18,19,24,0.95) 60%),
                 #0f1116;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+body::-webkit-scrollbar {
+    width: 0;
+    height: 0;
 }
 
 .page {
@@ -107,6 +114,9 @@ header {
     border-radius: 18px;
     backdrop-filter: blur(20px);
     box-shadow: 0 12px 30px rgba(0,0,0,0.35);
+    position: sticky;
+    top: 0;
+    z-index: 40;
 }
 
 .user-avatar {
