@@ -401,10 +401,16 @@ function openSheet(conn) {
   if (sheetQr) {
     sheetQr.innerHTML = '';
     if (window.QRCode) {
+      const rawText = String(conn.text || '');
+      const trimmed = rawText.includes('#') ? rawText.split('#')[0] : rawText;
       try {
-        new QRCode(sheetQr, { text: conn.text, width: 180, height: 180 });
+        new QRCode(sheetQr, { text: rawText, width: 180, height: 180 });
       } catch (e) {
-        sheetQr.textContent = 'QR слишком длинный';
+        try {
+          new QRCode(sheetQr, { text: trimmed, width: 180, height: 180 });
+        } catch {
+          sheetQr.textContent = 'QR слишком длинный';
+        }
       }
     } else {
       sheetQr.textContent = 'QR';
