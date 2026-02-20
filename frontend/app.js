@@ -112,6 +112,7 @@ loginBtn.addEventListener('click', async () => {
             headers: {
                 'Content-Type': 'application/json'
             },
+            credentials: 'include',
             body: JSON.stringify({
                 code: code,
                 telegram_user: telegramUser
@@ -159,6 +160,7 @@ loginBtn.addEventListener('click', async () => {
             if (userData.is_admin) {
                 adminBtn.classList.remove('hidden');
             }
+            await renderConnections();
         } else {
             errorMessage.textContent = data.message || 'Неверный код доступа';
         }
@@ -504,6 +506,7 @@ async function tryAutoLogin() {
     const response = await fetch(`${API_URL}/auth`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ code: '', telegram_user: telegramUser })
     });
 
@@ -529,6 +532,7 @@ async function tryAutoLogin() {
       if (userData.is_admin) {
         adminBtn.classList.remove('hidden');
       }
+      await renderConnections();
     }
   } catch (e) {
     // silent
