@@ -4,9 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Telegram Mini App</title>
-    <link rel="stylesheet" href="styles.css?v=2026-02-20-4">
+    <link rel="stylesheet" href="styles.css?v=2026-02-20-5">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
     <base href="/">
 </head>
 <body>
@@ -76,6 +77,20 @@
         <button id="close-sheet" class="btn ghost">Закрыть</button>
     </div>
 
+    <div id="add-overlay" class="sheet-overlay hidden"></div>
+    <div id="add-sheet" class="sheet hidden">
+        <div class="sheet-handle"></div>
+        <h4>Добавить конфиг</h4>
+        <textarea id="add-text" class="sheet-text" rows="4" placeholder="Вставьте конфиг"></textarea>
+        <div class="card glass" style="margin:8px 0;">
+            <div class="conn-sub">Сканер QR</div>
+            <video id="qr-video" style="width:100%; border-radius:12px; margin-top:8px;"></video>
+            <canvas id="qr-canvas" class="hidden"></canvas>
+        </div>
+        <button id="add-save" class="btn">Сохранить</button>
+        <button id="add-cancel" class="btn ghost">Отмена</button>
+    </div>
+
     <div id="admin-page" class="page hidden">
         <header>
             <div class="user-avatar" id="user-initial-admin"></div>
@@ -126,6 +141,6 @@
         <button id="admin-user-delete" class="btn ghost">Удалить пользователя</button>
     </div>
 
-    <script src="app.js?v=2026-02-20-9"></script>
+    <script src="app.js?v=2026-02-20-10"></script>
 </body>
 </html>

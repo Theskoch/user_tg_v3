@@ -47,6 +47,13 @@ const adminConfigAdd = document.getElementById('admin-config-add');
 const adminUserDelete = document.getElementById('admin-user-delete');
 const adminInitial = document.getElementById('user-initial-admin');
 const adminInitialUser = document.getElementById('user-initial-admin-user');
+const addOverlay = document.getElementById('add-overlay');
+const addSheet = document.getElementById('add-sheet');
+const addText = document.getElementById('add-text');
+const addSave = document.getElementById('add-save');
+const addCancel = document.getElementById('add-cancel');
+const qrVideo = document.getElementById('qr-video');
+const qrCanvas = document.getElementById('qr-canvas');
 
 // API URL
 const API_URL = window.location.origin;
@@ -401,15 +408,74 @@ adminBalanceSave?.addEventListener('click', async () => {
 
 adminConfigAdd?.addEventListener('click', async () => {
   if (!ADMIN_SELECTED) return;
-  const txt = prompt('Вставьте конфиг');
+  openAddSheet();
+});
+
+addCancel?.addEventListener('click', closeAddSheet);
+addOverlay?.addEventListener('click', closeAddSheet);
+
+addSave?.addEventListener('click', async () => {
+  if (!ADMIN_SELECTED) return;
+  const txt = addText.value.trim();
   if (!txt) return;
   await apiPost(`${API_URL}/api/admin/configs/add`, {
     target_user_id: ADMIN_SELECTED.id,
     title: 'Config',
     config_text: txt
   });
+  closeAddSheet();
   await loadAdminConfigs();
 });
+
+let qrStream = null;
+let qrScanTimer = null;
+
+function openAddSheet() {
+  addText.value = '';
+  addOverlay?.classList.remove('hidden');
+  addSheet?.classList.remove('hidden');
+  startQr();
+}
+
+function closeAddSheet() {
+  addOverlay?.classList.add('hidden');
+  addSheet?.classList.add('hidden');
+  stopQr();
+}
+
+async function startQr() {
+  try {
+    if (!qrVideo) return;
+    qrStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    qrVideo.srcObject = qrStream;
+    await qrVideo.play();
+    scanQrLoop();
+  } catch (e) {
+    // no camera
+  }
+}
+
+function stopQr() {
+  if (qrScanTimer) cancelAnimationFrame(qrScanTimer);
+  if (qrStream) {
+    qrStream.getTracks().forEach(t => t.stop());
+    qrStream = null;
+  }
+}
+
+function scanQrLoop() {
+  if (!qrVideo || !qrCanvas) return;
+  const ctx = qrCanvas.getContext('2d');
+  qrCanvas.width = qrVideo.videoWidth || 320;
+  qrCanvas.height = qrVideo.videoHeight || 240;
+  ctx.drawImage(qrVideo, 0, 0, qrCanvas.width, qrCanvas.height);
+  const img = ctx.getImageData(0, 0, qrCanvas.width, qrCanvas.height);
+  const code = window.jsQR ? window.jsQR(img.data, img.width, img.height) : null;
+  if (code && code.data) {
+    addText.value = code.data;
+  }
+  qrScanTimer = requestAnimationFrame(scanQrLoop);
+}
 
 adminUserDelete?.addEventListener('click', async () => {
   if (!ADMIN_SELECTED) return;

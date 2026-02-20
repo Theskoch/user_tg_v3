@@ -229,6 +229,11 @@ header {
     z-index: 61;
 }
 
+#add-sheet textarea.sheet-text {
+    min-height: 110px;
+    resize: vertical;
+}
+
 .sheet-handle {
     width: 60px;
     height: 5px;
