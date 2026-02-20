@@ -106,3 +106,46 @@ loginBtn.addEventListener('click', async () => {
         }
     }
 });
+
+// Auto-login on load if user already exists
+async function tryAutoLogin() {
+  try {
+    if (!tg || !tg.initDataUnsafe || !tg.initDataUnsafe.user) {
+      return;
+    }
+
+    const telegramUser = {
+      id: tg.initDataUnsafe.user.id,
+      username: tg.initDataUnsafe.user.username,
+      first_name: tg.initDataUnsafe.user.first_name,
+      last_name: tg.initDataUnsafe.user.last_name
+    };
+
+    const response = await fetch(`${API_URL}/auth`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: '', telegram_user: telegramUser })
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      loginPage.classList.add('hidden');
+      userPage.classList.remove('hidden');
+
+      userInitial.textContent = telegramUser.first_name
+        ? telegramUser.first_name[0].toUpperCase()
+        : 'U';
+
+      const userData = data.user ? data.user : await (await fetch(`${API_URL}/user`)).json();
+      userBalance.textContent = `${userData.balance.toFixed(2)} ₽`;
+      if (userData.is_admin) {
+        adminBtn.classList.remove('hidden');
+      }
+    }
+  } catch (e) {
+    // silent
+  }
+}
+
+tryAutoLogin();

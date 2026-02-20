@@ -70,6 +70,17 @@ def authenticate():
 
     if not telegram_data or not telegram_data.get('id'):
         return jsonify({'success': False, 'message': 'Нет данных Telegram'}), 400
+
+    # If user already exists, auto-login without code
+    existing_user = User.query.filter_by(telegram_id=telegram_data['id']).first()
+    if existing_user:
+        session['user_id'] = existing_user.id
+        return jsonify({
+            'success': True,
+            'is_admin': existing_user.is_admin,
+            'user': existing_user.to_dict(),
+            'auto': True
+        })
     
     # Validate one-time code
     one_time_code = OneTimeCode.query.filter_by(code=code).first()
@@ -86,20 +97,16 @@ def authenticate():
         return jsonify({'success': False, 'message': 'Код просрочен'})
     
     # Create user
-    existing_user = User.query.filter_by(telegram_id=telegram_data['id']).first()
-    if not existing_user:
-        new_user = User(
-            telegram_id=telegram_data['id'],
-            username=telegram_data.get('username'),
-            first_name=telegram_data.get('first_name'),
-            last_name=telegram_data.get('last_name'),
-            is_admin=one_time_code.is_admin
-        )
-        db.session.add(new_user)
-        db.session.commit()
-        user_id = new_user.id
-    else:
-        user_id = existing_user.id
+    new_user = User(
+        telegram_id=telegram_data['id'],
+        username=telegram_data.get('username'),
+        first_name=telegram_data.get('first_name'),
+        last_name=telegram_data.get('last_name'),
+        is_admin=one_time_code.is_admin
+    )
+    db.session.add(new_user)
+    db.session.commit()
+    user_id = new_user.id
     
     # Mark code as used
     one_time_code.used_at = datetime.utcnow()
