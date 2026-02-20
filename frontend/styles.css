@@ -4,7 +4,7 @@ body {
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", sans-serif;
     margin: 0;
     padding: 0;
-    color: #eaeaea;
+    color: #eef1f6;
     background: radial-gradient(1200px 800px at 10% -10%, #2a2f3a 0%, rgba(18,19,24,0.95) 55%),
                 radial-gradient(1000px 600px at 100% 0%, rgba(64,83,255,0.25) 0%, rgba(18,19,24,0.95) 60%),
                 #0f1116;
@@ -49,7 +49,7 @@ body {
 
 #access-code::placeholder { color: rgba(255,255,255,0.5); }
 
-#login-btn, #replenish-btn, #admin-btn {
+#login-btn, #replenish-btn, #download-btn, #admin-btn {
     width: 100%;
     padding: 12px 14px;
     border-radius: 12px;
@@ -92,6 +92,10 @@ body {
     margin-top: 10px;
 }
 
+h2, h3, h4 {
+    color: #f3f6ff;
+}
+
 /* User Page Header */
 header {
     display: flex;
@@ -126,6 +130,32 @@ header {
     padding: 8px 12px;
     border-radius: 12px;
     border: 1px solid rgba(255,255,255,0.12);
+    min-width: 120px;
+    text-align: center;
+}
+
+.balance-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: center;
+    min-width: 140px;
+}
+
+.tariff-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: center;
+}
+
+.tariff-pill {
+    background: rgba(110,140,255,0.18);
+    color: #c9d6ff;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    border: 1px solid rgba(110,140,255,0.35);
 }
 
 .menu-icon {
@@ -186,7 +216,7 @@ header {
 }
 
 .conn-title { font-weight: 700; margin-bottom: 6px; }
-.conn-sub { opacity: 0.7; font-size: 13px; }
+.conn-sub { opacity: 0.78; font-size: 13px; color: rgba(230,235,245,0.78); }
 
 .card.glass {
     background: rgba(255,255,255,0.06);
@@ -201,6 +231,24 @@ header {
     display: grid;
     gap: 10px;
     margin-top: 10px;
+}
+
+button,
+.btn,
+.balance,
+.pay-card,
+.download-card,
+.icon-btn {
+    transition: transform 0.08s ease, box-shadow 0.12s ease, background 0.2s ease;
+}
+
+button:active,
+.btn:active,
+.balance:active,
+.pay-card:active,
+.download-card:active,
+.icon-btn:active {
+    transform: scale(0.97);
 }
 
 .pay-card {

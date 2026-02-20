@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Telegram Mini App</title>
-    <link rel="stylesheet" href="styles.css?v=2026-02-20-7">
+    <link rel="stylesheet" href="styles.css?v=2026-02-20-8">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
@@ -24,10 +24,12 @@
     <div id="user-page" class="page hidden">
         <header>
             <div class="user-avatar" id="user-initial"></div>
-            <div style="display:flex; flex-direction:column; gap:2px; align-items:center;">
+            <div class="balance-stack">
                 <button class="balance" id="user-balance" type="button">0 ₽</button>
-                <div class="conn-sub" id="user-tariff-name">—</div>
-                <div class="conn-sub" id="user-tariff-until">—</div>
+                <div class="tariff-row">
+                    <span class="tariff-pill" id="user-tariff-name">—</span>
+                    <span class="conn-sub" id="user-tariff-until">—</span>
+                </div>
             </div>
             <div class="menu-icon" id="menu-toggle">
                 <div class="bar"></div>
@@ -51,10 +53,12 @@
     <div id="topup-page" class="page hidden">
         <header>
             <div class="user-avatar" id="user-initial-topup"></div>
-            <div style="display:flex; flex-direction:column; gap:2px; align-items:center;">
+            <div class="balance-stack">
                 <button class="balance" id="user-balance-topup" type="button">0 ₽</button>
-                <div class="conn-sub" id="user-tariff-name-topup">—</div>
-                <div class="conn-sub" id="user-tariff-until-topup">—</div>
+                <div class="tariff-row">
+                    <span class="tariff-pill" id="user-tariff-name-topup">—</span>
+                    <span class="conn-sub" id="user-tariff-until-topup">—</span>
+                </div>
             </div>
             <button id="topup-back" class="icon-btn" type="button">←</button>
         </header>
@@ -175,6 +179,6 @@
         <button id="admin-user-delete" class="btn ghost">Удалить пользователя</button>
     </div>
 
-    <script src="app.js?v=2026-02-20-21"></script>
+    <script src="app.js?v=2026-02-20-23"></script>
 </body>
 </html>
