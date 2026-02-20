@@ -367,11 +367,13 @@ function openWarnSheet(c) {
   warnConfig = c;
   warnOverlay?.classList.remove('hidden');
   warnSheet?.classList.remove('hidden');
+  requestAnimationFrame(() => warnSheet?.classList.add('show'));
 }
 
 function closeWarnSheet() {
   warnOverlay?.classList.add('hidden');
-  warnSheet?.classList.add('hidden');
+  warnSheet?.classList.remove('show');
+  setTimeout(() => warnSheet?.classList.add('hidden'), 250);
   warnConfig = null;
 }
 
