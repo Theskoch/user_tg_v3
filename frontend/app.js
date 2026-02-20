@@ -540,4 +540,3 @@ async function tryAutoLogin() {
 }
 
 tryAutoLogin();
-renderConnections();
