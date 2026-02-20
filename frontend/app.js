@@ -209,7 +209,19 @@ closeSheetBtn?.addEventListener('click', closeSheet);
 copyConfigBtn?.addEventListener('click', async () => {
   try {
     const value = sheetText?.innerText || '';
-    await navigator.clipboard.writeText(value);
+    try {
+      await navigator.clipboard.writeText(value);
+    } catch {
+      const ta = document.createElement('textarea');
+      ta.value = value;
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
   } catch {}
 });
 
@@ -248,6 +260,9 @@ async function tryAutoLogin() {
       userBalance.textContent = `${balance} ₽`;
       if (userBalanceTopup) {
         userBalanceTopup.textContent = `${balance} ₽`;
+      }
+      if (userInitialTopup) {
+        userInitialTopup.textContent = userInitial.textContent;
       }
       if (userData.is_admin) {
         adminBtn.classList.remove('hidden');
