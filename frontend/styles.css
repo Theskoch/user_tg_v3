@@ -358,6 +358,10 @@ button:active,
     max-width: 100%;
 }
 
+#add-sheet .btn + .btn {
+    margin-top: 10px;
+}
+
 .sheet-handle {
     width: 60px;
     height: 5px;

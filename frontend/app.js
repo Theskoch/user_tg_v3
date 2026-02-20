@@ -403,14 +403,24 @@ function openSheet(conn) {
     if (window.QRCode) {
       const rawText = String(conn.text || '');
       const trimmed = rawText.includes('#') ? rawText.split('#')[0] : rawText;
+      const size = 180;
       try {
-        new QRCode(sheetQr, { text: rawText, width: 180, height: 180 });
+        new QRCode(sheetQr, { text: rawText, width: size, height: size });
       } catch (e) {
         try {
-          new QRCode(sheetQr, { text: trimmed, width: 180, height: 180 });
+          new QRCode(sheetQr, { text: trimmed, width: size, height: size });
         } catch {
           sheetQr.textContent = 'QR слишком длинный';
         }
+      }
+      const qrEl = sheetQr.querySelector('canvas, img, table');
+      if (qrEl) {
+        qrEl.style.width = `${size}px`;
+        qrEl.style.height = `${size}px`;
+        qrEl.style.maxWidth = '100%';
+        qrEl.style.maxHeight = '100%';
+        qrEl.style.display = 'block';
+        qrEl.style.margin = '0 auto';
       }
     } else {
       sheetQr.textContent = 'QR';
