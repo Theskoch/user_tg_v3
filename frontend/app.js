@@ -12,6 +12,8 @@ const accessCodeInput = document.getElementById('access-code');
 const errorMessage = document.getElementById('error-message');
 const userInitial = document.getElementById('user-initial');
 const userBalance = document.getElementById('user-balance');
+const userTariffName = document.getElementById('user-tariff-name');
+const userTariffUntil = document.getElementById('user-tariff-until');
 const adminBtn = document.getElementById('admin-btn');
 const debugPanel = document.getElementById('debug-panel');
 const menuToggle = document.getElementById('menu-toggle');
@@ -21,6 +23,8 @@ const topupPage = document.getElementById('topup-page');
 const topupBack = document.getElementById('topup-back');
 const userInitialTopup = document.getElementById('user-initial-topup');
 const userBalanceTopup = document.getElementById('user-balance-topup');
+const userTariffNameTopup = document.getElementById('user-tariff-name-topup');
+const userTariffUntilTopup = document.getElementById('user-tariff-until-topup');
 const connectionsBox = document.getElementById('connections');
 const sheet = document.getElementById('sheet');
 const sheetOverlay = document.getElementById('sheet-overlay');
@@ -78,6 +82,26 @@ async function apiPost(path, payload = {}) {
   });
   if (!r.ok) throw new Error(await r.text());
   return r.json();
+}
+
+function applyTariffUi(userData) {
+  const tariffName = userData?.tariff_name || '—';
+  const paidUntil = userData?.tariff_paid_until ? new Date(userData.tariff_paid_until) : null;
+  const paidUntilText = paidUntil ? paidUntil.toLocaleDateString('ru-RU') : '—';
+
+  if (userTariffName) userTariffName.textContent = tariffName;
+  if (userTariffUntil) userTariffUntil.textContent = paidUntil ? `до ${paidUntilText}` : '—';
+
+  if (userTariffNameTopup) userTariffNameTopup.textContent = tariffName;
+  if (userTariffUntilTopup) userTariffUntilTopup.textContent = paidUntil ? `до ${paidUntilText}` : '—';
+
+  if (paidUntil && userBalance) {
+    if (paidUntil < new Date()) {
+      userBalance.style.color = '#ff5d5d';
+    } else {
+      userBalance.style.color = '';
+    }
+  }
 }
 
 // Authentication
@@ -149,7 +173,7 @@ loginBtn.addEventListener('click', async () => {
                 : 'U';
             
             // Fetch and set user details
-            const userData = data.user ? data.user : await (await fetch(`${API_URL}/user`)).json();
+            const userData = await apiGet(`${API_URL}/user`);
             
             // Set balance
             const balance = Number(userData.balance || 0).toFixed(2);
@@ -160,6 +184,8 @@ loginBtn.addEventListener('click', async () => {
             if (userInitialTopup) {
               userInitialTopup.textContent = userInitial.textContent;
             }
+
+            applyTariffUi(userData);
             
             // Show/hide admin button based on user role
             if (userData.is_admin) {
@@ -580,7 +606,7 @@ async function tryAutoLogin() {
         ? telegramUser.first_name[0].toUpperCase()
         : 'U';
 
-      const userData = data.user ? data.user : await (await fetch(`${API_URL}/user`)).json();
+      const userData = await apiGet(`${API_URL}/user`);
       const balance = Number(userData.balance || 0).toFixed(2);
       userBalance.textContent = `${balance} ₽`;
       if (userBalanceTopup) {
@@ -589,6 +615,8 @@ async function tryAutoLogin() {
       if (userInitialTopup) {
         userInitialTopup.textContent = userInitial.textContent;
       }
+
+      applyTariffUi(userData);
       if (userData.is_admin) {
         adminBtn.classList.remove('hidden');
       }

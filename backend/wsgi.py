@@ -1,10 +1,11 @@
-from app import app, db, ensure_first_admin_code, ensure_schema
+from app import app, db, ensure_first_admin_code, ensure_schema, start_billing_thread
 
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
         ensure_schema()
         ensure_first_admin_code()
+        start_billing_thread()
     
     # Get local IP address
     import socket

@@ -24,6 +24,10 @@ class User(db.Model):
     is_admin = Column(Boolean, default=False)
     balance = Column(Float, default=0.0)
     tariff_id = Column(Integer, nullable=True)
+    tariff_paid_until = Column(DateTime, nullable=True)
+    tariff_next_charge_at = Column(DateTime, nullable=True)
+    last_low_balance_warn_at = Column(DateTime, nullable=True)
+    last_overdue_admin_at = Column(DateTime, nullable=True)
     
     def to_dict(self):
         return {
@@ -34,7 +38,9 @@ class User(db.Model):
             'last_name': self.last_name,
             'is_admin': self.is_admin,
             'balance': self.balance,
-            'tariff_id': self.tariff_id
+            'tariff_id': self.tariff_id,
+            'tariff_paid_until': self.tariff_paid_until.isoformat() if self.tariff_paid_until else None,
+            'tariff_next_charge_at': self.tariff_next_charge_at.isoformat() if self.tariff_next_charge_at else None
         }
 
 class ConfigItem(db.Model):

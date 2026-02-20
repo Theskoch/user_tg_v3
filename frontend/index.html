@@ -24,7 +24,11 @@
     <div id="user-page" class="page hidden">
         <header>
             <div class="user-avatar" id="user-initial"></div>
-            <button class="balance" id="user-balance" type="button">0 ₽</button>
+            <div style="display:flex; flex-direction:column; gap:2px; align-items:center;">
+                <button class="balance" id="user-balance" type="button">0 ₽</button>
+                <div class="conn-sub" id="user-tariff-name">—</div>
+                <div class="conn-sub" id="user-tariff-until">—</div>
+            </div>
             <div class="menu-icon" id="menu-toggle">
                 <div class="bar"></div>
                 <div class="bar"></div>
@@ -46,7 +50,11 @@
     <div id="topup-page" class="page hidden">
         <header>
             <div class="user-avatar" id="user-initial-topup"></div>
-            <button class="balance" id="user-balance-topup" type="button">0 ₽</button>
+            <div style="display:flex; flex-direction:column; gap:2px; align-items:center;">
+                <button class="balance" id="user-balance-topup" type="button">0 ₽</button>
+                <div class="conn-sub" id="user-tariff-name-topup">—</div>
+                <div class="conn-sub" id="user-tariff-until-topup">—</div>
+            </div>
             <button id="topup-back" class="icon-btn" type="button">←</button>
         </header>
 
@@ -153,6 +161,6 @@
         <button id="admin-user-delete" class="btn ghost">Удалить пользователя</button>
     </div>
 
-    <script src="app.js?v=2026-02-20-18"></script>
+    <script src="app.js?v=2026-02-20-19"></script>
 </body>
 </html>
