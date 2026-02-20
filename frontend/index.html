@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Telegram Mini App</title>
-    <link rel="stylesheet" href="styles.css?v=2026-02-21-03">
+    <link rel="stylesheet" href="styles.css?v=2026-02-21-05">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
@@ -116,10 +116,12 @@
             <canvas id="qr-canvas" class="hidden"></canvas>
             <button id="qr-rescan" class="btn ghost" style="margin-top:8px;">Сканировать ещё раз</button>
         </div>
+        <div class="conn-sub" style="margin:4px 0 6px;">Тип конфига</div>
         <select id="add-type" class="sheet-text">
             <option value="wg">WG</option>
             <option value="vless">VLESS</option>
         </select>
+        <div class="conn-sub" style="margin:4px 0 6px;">Имя конфига</div>
         <input id="add-name" class="sheet-text" placeholder="Название конфига" />
         <textarea id="add-text" class="sheet-text" rows="4" placeholder="Вставьте конфиг"></textarea>
         <button id="add-save" class="btn">Сохранить</button>
@@ -136,8 +138,8 @@
         <div class="card glass">
             <h3>Пригласить пользователя</h3>
             <div class="row" style="display:grid; gap:8px;">
-                <button id="invite-admin" class="btn">Сгенерировать код Админ</button>
-                <button id="invite-user" class="btn ghost">Сгенерировать код Юзер</button>
+                <button id="invite-admin" class="btn">+ admin</button>
+                <button id="invite-user" class="btn ghost">+ user</button>
                 <div id="invite-code" class="sheet-text" style="margin:0;">—</div>
             </div>
         </div>
@@ -162,7 +164,7 @@
     <div id="admin-user-page" class="page hidden">
         <header>
             <div class="user-avatar" id="user-initial-admin-user"></div>
-            <div class="balance" id="admin-user-title">Пользователь</div>
+            <div class="balance admin-user-title" id="admin-user-title">Пользователь</div>
             <button id="admin-user-back" class="icon-btn" type="button">←</button>
         </header>
 
@@ -188,6 +190,6 @@
         <button id="admin-user-delete" class="btn ghost">Удалить пользователя</button>
     </div>
 
-    <script src="app.js?v=2026-02-21-03"></script>
+    <script src="app.js?v=2026-02-21-07"></script>
 </body>
 </html>

@@ -510,7 +510,9 @@ async function openAdminUser(u) {
   ADMIN_SELECTED = u;
   adminPage.classList.add('hidden');
   adminUserPage.classList.remove('hidden');
-  if (adminInitialUser) adminInitialUser.textContent = (u.first_name || 'U')[0].toUpperCase();
+  if (adminInitialUser && !adminInitialUser.textContent) {
+    adminInitialUser.textContent = (u.first_name || 'U')[0].toUpperCase();
+  }
   adminUserTitle.textContent = `${u.first_name || ''} @${u.username || ''}`;
 
   if (adminTariffSelect) {
