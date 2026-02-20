@@ -224,26 +224,28 @@ if (topupBack) {
 }
 
 // Connections placeholder
-function renderConnections() {
+async function renderConnections() {
   if (!connectionsBox) return;
   connectionsBox.innerHTML = '';
-
-  const dummy = {
-    title: 'Connection #1',
-    proto: 'VLESS',
-    name: 'NL-1 Amsterdam',
-    text: 'vless://example-connection-text'
-  };
-
-  const card = document.createElement('div');
-  card.className = 'conn-card';
-  card.innerHTML = `
-    <div class="conn-title">${dummy.name}</div>
-    <div class="conn-sub">${dummy.proto} • ${dummy.title}</div>
-    <div class="conn-sub">${dummy.text.slice(0, 18)}...</div>
-  `;
-  card.addEventListener('click', () => openSheet(dummy));
-  connectionsBox.appendChild(card);
+  try {
+    const configs = await apiGet(`${API_URL}/api/configs`);
+    if (!configs.length) {
+      connectionsBox.innerHTML = '<div class="conn-sub">Нет подключений</div>';
+      return;
+    }
+    configs.forEach(c => {
+      const card = document.createElement('div');
+      card.className = 'conn-card';
+      card.innerHTML = `
+        <div class="conn-title">${c.name || c.title || 'Config'}</div>
+        <div class="conn-sub">${(c.protocol || '—')} • ${String(c.config_text || '').slice(0, 18)}...</div>
+      `;
+      card.addEventListener('click', () => openSheet({ name: c.name || c.title, text: c.config_text }));
+      connectionsBox.appendChild(card);
+    });
+  } catch {
+    connectionsBox.innerHTML = '<div class="conn-sub">Ошибка загрузки</div>';
+  }
 }
 
 function openSheet(conn) {

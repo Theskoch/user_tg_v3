@@ -303,6 +303,14 @@ def admin_configs_delete():
     db.session.commit()
     return jsonify({'ok': True})
 
+@app.route('/api/configs', methods=['GET'])
+def user_configs():
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'error': 'Not authenticated'}), 401
+    configs = ConfigItem.query.filter_by(user_id=user_id).all()
+    return jsonify([c.to_dict() for c in configs])
+
 @app.route('/user', methods=['GET'])
 def get_user():
     user_id = session.get('user_id')
