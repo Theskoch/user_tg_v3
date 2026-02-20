@@ -104,9 +104,10 @@ loginBtn.addEventListener('click', async () => {
             const userData = data.user ? data.user : await (await fetch(`${API_URL}/user`)).json();
             
             // Set balance
-            userBalance.textContent = `${userData.balance.toFixed(2)} ₽`;
+            const balance = Number(userData.balance || 0).toFixed(2);
+            userBalance.textContent = `${balance} ₽`;
             if (userBalanceTopup) {
-              userBalanceTopup.textContent = `${userData.balance.toFixed(2)} ₽`;
+              userBalanceTopup.textContent = `${balance} ₽`;
             }
             if (userInitialTopup) {
               userInitialTopup.textContent = userInitial.textContent;
@@ -207,7 +208,8 @@ closeSheetBtn?.addEventListener('click', closeSheet);
 
 copyConfigBtn?.addEventListener('click', async () => {
   try {
-    await navigator.clipboard.writeText(sheetText.textContent || '');
+    const value = sheetText?.innerText || '';
+    await navigator.clipboard.writeText(value);
   } catch {}
 });
 
@@ -242,7 +244,11 @@ async function tryAutoLogin() {
         : 'U';
 
       const userData = data.user ? data.user : await (await fetch(`${API_URL}/user`)).json();
-      userBalance.textContent = `${userData.balance.toFixed(2)} ₽`;
+      const balance = Number(userData.balance || 0).toFixed(2);
+      userBalance.textContent = `${balance} ₽`;
+      if (userBalanceTopup) {
+        userBalanceTopup.textContent = `${balance} ₽`;
+      }
       if (userData.is_admin) {
         adminBtn.classList.remove('hidden');
       }
