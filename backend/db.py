@@ -1,7 +1,17 @@
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import Column, Integer, String, Boolean, Float
+from sqlalchemy import Column, Integer, String, Boolean, Float, DateTime
+from datetime import datetime
 
 db = SQLAlchemy()
+
+class OneTimeCode(db.Model):
+    __tablename__ = 'one_time_codes'
+    
+    id = Column(Integer, primary_key=True)
+    code = Column(String, unique=True, nullable=False)
+    is_admin = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    used_at = Column(DateTime, nullable=True)
 
 class User(db.Model):
     __tablename__ = 'users'
