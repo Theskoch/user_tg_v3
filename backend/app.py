@@ -1,13 +1,18 @@
 import os
 import secrets
-from flask import Flask, request, jsonify, session
+from flask import Flask, request, jsonify, session, send_from_directory
 from flask_cors import CORS
 from config import Config
 from db import db, User
 import telebot
 from werkzeug.middleware.proxy_fix import ProxyFix
+import os
 
-app = Flask(__name__)
+# Determine project root
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+FRONTEND_DIR = os.path.join(PROJECT_ROOT, 'frontend')
+
+app = Flask(__name__, static_folder=FRONTEND_DIR, static_url_path='/')
 app.config.from_object(Config)
 
 # Configure for Nginx proxy
@@ -16,6 +21,15 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
 # More permissive CORS
 CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 db.init_app(app)
+
+# Serve frontend files
+@app.route('/')
+def serve_frontend():
+    return send_from_directory(FRONTEND_DIR, 'index.html')
+
+@app.route('/<path:path>')
+def serve_static(path):
+    return send_from_directory(FRONTEND_DIR, path)
 
 # Configure session 
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', secrets.token_hex(16))
