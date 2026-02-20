@@ -401,7 +401,11 @@ function openSheet(conn) {
   if (sheetQr) {
     sheetQr.innerHTML = '';
     if (window.QRCode) {
-      new QRCode(sheetQr, { text: conn.text, width: 180, height: 180 });
+      try {
+        new QRCode(sheetQr, { text: conn.text, width: 180, height: 180 });
+      } catch (e) {
+        sheetQr.textContent = 'QR слишком длинный';
+      }
     } else {
       sheetQr.textContent = 'QR';
     }

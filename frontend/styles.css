@@ -84,6 +84,16 @@ body::-webkit-scrollbar {
     font-weight: 600;
 }
 
+.btn,
+.icon-btn,
+.balance,
+.pay-card,
+.download-card {
+    cursor: pointer;
+    pointer-events: auto;
+    touch-action: manipulation;
+}
+
 .btn.ghost {
     background: rgba(255,255,255,0.08);
     border: 1px solid rgba(255,255,255,0.15);
