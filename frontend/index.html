@@ -77,10 +77,55 @@
     </div>
 
     <div id="admin-page" class="page hidden">
-        <h1>Панель администратора</h1>
-        <p>Функционал в разработке</p>
+        <header>
+            <div class="user-avatar" id="user-initial-admin"></div>
+            <div class="balance" id="admin-title">Админка</div>
+            <button id="admin-back" class="icon-btn" type="button">←</button>
+        </header>
+
+        <div class="card glass">
+            <h3>Пригласить пользователя</h3>
+            <div class="row" style="display:grid; gap:8px;">
+                <button id="invite-admin" class="btn">Сгенерировать код Админ</button>
+                <button id="invite-user" class="btn ghost">Сгенерировать код Юзер</button>
+                <div id="invite-code" class="sheet-text" style="margin:0;">—</div>
+            </div>
+        </div>
+
+        <div class="card glass">
+            <h3>Пользователи</h3>
+            <div id="admin-users" class="connections-grid"></div>
+        </div>
     </div>
 
-    <script src="app.js?v=2026-02-20-6"></script>
+    <div id="admin-user-page" class="page hidden">
+        <header>
+            <div class="user-avatar" id="user-initial-admin-user"></div>
+            <div class="balance" id="admin-user-title">Пользователь</div>
+            <button id="admin-user-back" class="icon-btn" type="button">←</button>
+        </header>
+
+        <div class="card glass">
+            <h3>Тариф</h3>
+            <select id="admin-tariff" class="sheet-text"></select>
+            <button id="admin-tariff-save" class="btn">Сохранить тариф</button>
+        </div>
+
+        <div class="card glass">
+            <h3>Баланс</h3>
+            <input id="admin-balance" class="sheet-text" placeholder="0.00" />
+            <button id="admin-balance-save" class="btn">Сохранить баланс</button>
+        </div>
+
+        <div class="card glass">
+            <h3>Конфиги</h3>
+            <button id="admin-config-add" class="btn">Добавить конфиг</button>
+            <div id="admin-configs" class="connections-grid"></div>
+        </div>
+
+        <button id="admin-user-delete" class="btn ghost">Удалить пользователя</button>
+    </div>
+
+    <script src="app.js?v=2026-02-20-8"></script>
 </body>
 </html>

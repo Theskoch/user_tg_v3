@@ -29,9 +29,44 @@ const sheetText = document.getElementById('sheet-text');
 const sheetQr = document.getElementById('sheet-qr');
 const copyConfigBtn = document.getElementById('copy-config');
 const closeSheetBtn = document.getElementById('close-sheet');
+const adminPage = document.getElementById('admin-page');
+const adminBack = document.getElementById('admin-back');
+const adminUsersBox = document.getElementById('admin-users');
+const inviteAdminBtn = document.getElementById('invite-admin');
+const inviteUserBtn = document.getElementById('invite-user');
+const inviteCodeBox = document.getElementById('invite-code');
+const adminUserPage = document.getElementById('admin-user-page');
+const adminUserBack = document.getElementById('admin-user-back');
+const adminUserTitle = document.getElementById('admin-user-title');
+const adminTariffSelect = document.getElementById('admin-tariff');
+const adminTariffSave = document.getElementById('admin-tariff-save');
+const adminBalanceInput = document.getElementById('admin-balance');
+const adminBalanceSave = document.getElementById('admin-balance-save');
+const adminConfigsBox = document.getElementById('admin-configs');
+const adminConfigAdd = document.getElementById('admin-config-add');
+const adminUserDelete = document.getElementById('admin-user-delete');
+const adminInitial = document.getElementById('user-initial-admin');
+const adminInitialUser = document.getElementById('user-initial-admin-user');
 
 // API URL
 const API_URL = window.location.origin;
+
+async function apiGet(path) {
+  const r = await fetch(path, { credentials: 'include' });
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+async function apiPost(path, payload = {}) {
+  const r = await fetch(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(payload)
+  });
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
 
 // Authentication
 loginBtn.addEventListener('click', async () => {
@@ -136,6 +171,28 @@ if (menuToggle && sideMenu) {
   });
 }
 
+// Admin navigation
+if (adminBtn && adminPage) {
+  adminBtn.addEventListener('click', async () => {
+    userPage.classList.add('hidden');
+    adminPage.classList.remove('hidden');
+    sideMenu?.classList.add('hidden');
+    if (adminInitial) adminInitial.textContent = userInitial.textContent || 'A';
+    await loadAdminUsers();
+    await loadTariffs();
+  });
+}
+
+adminBack?.addEventListener('click', () => {
+  adminPage.classList.add('hidden');
+  userPage.classList.remove('hidden');
+});
+
+adminUserBack?.addEventListener('click', () => {
+  adminUserPage.classList.add('hidden');
+  adminPage.classList.remove('hidden');
+});
+
 // Top up navigation
 if (replenishBtn && topupPage) {
   replenishBtn.addEventListener('click', () => {
@@ -223,6 +280,143 @@ copyConfigBtn?.addEventListener('click', async () => {
       document.body.removeChild(ta);
     }
   } catch {}
+});
+
+// Admin logic
+let ADMIN_USERS = [];
+let ADMIN_TARIFFS = [];
+let ADMIN_SELECTED = null;
+
+async function loadTariffs() {
+  try {
+    const r = await apiGet(`${API_URL}/api/tariffs`);
+    ADMIN_TARIFFS = r.tariffs || [];
+    if (adminTariffSelect) {
+      adminTariffSelect.innerHTML = ADMIN_TARIFFS
+        .map(t => `<option value="${t.id}">${t.name} — ${t.price_rub} ₽ / ${t.period_months} мес</option>`)
+        .join('');
+    }
+  } catch {}
+}
+
+async function loadAdminUsers() {
+  if (!adminUsersBox) return;
+  adminUsersBox.innerHTML = '';
+  try {
+    ADMIN_USERS = await apiGet(`${API_URL}/api/admin/users`);
+  } catch {
+    adminUsersBox.innerHTML = '<div class="conn-sub">Ошибка загрузки</div>';
+    return;
+  }
+
+  ADMIN_USERS.forEach(u => {
+    const card = document.createElement('div');
+    card.className = 'conn-card';
+    card.innerHTML = `
+      <div class="user-row">
+        <div>
+          <div class="conn-title">${u.first_name || ''} @${u.username || ''}</div>
+          <div class="conn-sub">${(Number(u.balance || 0)).toFixed(2)} ₽ • ${u.tariff_name || '—'}</div>
+        </div>
+        <span class="tag">${u.role}</span>
+      </div>
+    `;
+    card.addEventListener('click', () => openAdminUser(u));
+    adminUsersBox.appendChild(card);
+  });
+}
+
+async function openAdminUser(u) {
+  ADMIN_SELECTED = u;
+  adminPage.classList.add('hidden');
+  adminUserPage.classList.remove('hidden');
+  if (adminInitialUser) adminInitialUser.textContent = (u.first_name || 'U')[0].toUpperCase();
+  adminUserTitle.textContent = `${u.first_name || ''} @${u.username || ''}`;
+
+  if (adminTariffSelect) {
+    adminTariffSelect.value = u.tariff_id ? String(u.tariff_id) : '';
+  }
+  if (adminBalanceInput) {
+    adminBalanceInput.value = (Number(u.balance || 0)).toFixed(2);
+  }
+  await loadAdminConfigs();
+}
+
+async function loadAdminConfigs() {
+  if (!ADMIN_SELECTED || !adminConfigsBox) return;
+  adminConfigsBox.innerHTML = '';
+  const configs = await apiPost(`${API_URL}/api/admin/configs/list`, { target_user_id: ADMIN_SELECTED.id });
+  configs.forEach(c => {
+    const card = document.createElement('div');
+    card.className = 'conn-card';
+    card.innerHTML = `
+      <div class="conn-title">${c.name || c.title || 'Config'}</div>
+      <div class="conn-sub">${(c.protocol || '—')} • ${String(c.config_text || '').slice(0, 18)}...</div>
+      <div class="row" style="display:flex; gap:8px; margin-top:8px;">
+        <button class="btn ghost" type="button">Открыть</button>
+        <button class="btn ghost" type="button">Удалить</button>
+      </div>
+    `;
+    const [openBtn, delBtn] = card.querySelectorAll('button');
+    openBtn.addEventListener('click', () => openSheet({ name: c.name || c.title, text: c.config_text }));
+    delBtn.addEventListener('click', async () => {
+      await apiPost(`${API_URL}/api/admin/configs/delete`, { config_id: c.id });
+      await loadAdminConfigs();
+    });
+    adminConfigsBox.appendChild(card);
+  });
+}
+
+inviteAdminBtn?.addEventListener('click', async () => {
+  try {
+    const r = await apiPost(`${API_URL}/generate_code`, { role: 'admin' });
+    inviteCodeBox.textContent = r.code;
+  } catch {}
+});
+
+inviteUserBtn?.addEventListener('click', async () => {
+  try {
+    const r = await apiPost(`${API_URL}/generate_code`, { role: 'user' });
+    inviteCodeBox.textContent = r.code;
+  } catch {}
+});
+
+adminTariffSave?.addEventListener('click', async () => {
+  if (!ADMIN_SELECTED) return;
+  await apiPost(`${API_URL}/api/admin/user/set_tariff`, {
+    target_user_id: ADMIN_SELECTED.id,
+    tariff_id: Number(adminTariffSelect.value)
+  });
+  await loadAdminUsers();
+});
+
+adminBalanceSave?.addEventListener('click', async () => {
+  if (!ADMIN_SELECTED) return;
+  await apiPost(`${API_URL}/api/admin/user/set_balance`, {
+    target_user_id: ADMIN_SELECTED.id,
+    balance: adminBalanceInput.value
+  });
+  await loadAdminUsers();
+});
+
+adminConfigAdd?.addEventListener('click', async () => {
+  if (!ADMIN_SELECTED) return;
+  const txt = prompt('Вставьте конфиг');
+  if (!txt) return;
+  await apiPost(`${API_URL}/api/admin/configs/add`, {
+    target_user_id: ADMIN_SELECTED.id,
+    title: 'Config',
+    config_text: txt
+  });
+  await loadAdminConfigs();
+});
+
+adminUserDelete?.addEventListener('click', async () => {
+  if (!ADMIN_SELECTED) return;
+  await apiPost(`${API_URL}/api/admin/user/delete`, { target_user_id: ADMIN_SELECTED.id });
+  adminUserPage.classList.add('hidden');
+  adminPage.classList.remove('hidden');
+  await loadAdminUsers();
 });
 
 // Auto-login on load if user already exists

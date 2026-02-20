@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from flask import Flask, request, jsonify, session, send_from_directory
 from flask_cors import CORS
 from config import Config
-from db import db, User, OneTimeCode
+from db import db, User, OneTimeCode, ConfigItem
 import telebot
 from werkzeug.middleware.proxy_fix import ProxyFix
 
@@ -42,6 +42,16 @@ app.config['SESSION_COOKIE_SECURE'] = False
 # Telegram Bot Setup
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
 bot = telebot.TeleBot(BOT_TOKEN)
+
+TARIFFS_PATH = os.path.join(PROJECT_ROOT, 'frontend', 'tariffs.json')
+
+def load_tariffs():
+    try:
+        import json
+        with open(TARIFFS_PATH, 'r', encoding='utf-8') as f:
+            return json.load(f).get('tariffs', [])
+    except Exception:
+        return []
 
 def ensure_first_admin_code():
     """Ensure a one-time admin code exists. Print it once on startup."""
@@ -92,8 +102,8 @@ def authenticate():
     if one_time_code.used_at:
         return jsonify({'success': False, 'message': 'Код уже использован'})
     
-    # Check code expiration (1 hour)
-    if one_time_code.created_at < datetime.utcnow() - timedelta(hours=1):
+    # Check code expiration (24 hours)
+    if one_time_code.created_at < datetime.utcnow() - timedelta(hours=24):
         return jsonify({'success': False, 'message': 'Код просрочен'})
     
     # Create user
@@ -131,6 +141,10 @@ def generate_code():
     if not user or not user.is_admin:
         return jsonify({'error': 'Unauthorized'}), 403
     
+    data = request.json or {}
+    role = data.get('role')
+    is_admin = True if role == 'admin' else False
+
     # Generate a unique one-time code
     while True:
         code = secrets.token_urlsafe(6)  # Generate a URL-safe code
@@ -139,14 +153,142 @@ def generate_code():
             break
     
     # Create new one-time code
-    new_code = OneTimeCode(
-        code=code,
-        is_admin=False  # Default to regular user
-    )
+    new_code = OneTimeCode(code=code, is_admin=is_admin)
     db.session.add(new_code)
     db.session.commit()
     
-    return jsonify({'code': code})
+    return jsonify({'code': code, 'role': 'admin' if is_admin else 'user'})
+
+@app.route('/api/tariffs', methods=['GET'])
+def api_tariffs():
+    return jsonify({'tariffs': load_tariffs()})
+
+def admin_required():
+    user_id = session.get('user_id')
+    user = User.query.get(user_id) if user_id else None
+    if not user or not user.is_admin:
+        return None
+    return user
+
+@app.route('/api/admin/users', methods=['GET'])
+def admin_users():
+    if not admin_required():
+        return jsonify({'error': 'Unauthorized'}), 403
+    tariffs = {t['id']: t for t in load_tariffs()}
+    users = []
+    for u in User.query.all():
+        t = tariffs.get(u.tariff_id)
+        users.append({
+            **u.to_dict(),
+            'role': 'admin' if u.is_admin else 'user',
+            'tariff_name': t['name'] if t else None
+        })
+    return jsonify(users)
+
+@app.route('/api/admin/user/set_tariff', methods=['POST'])
+def admin_set_tariff():
+    if not admin_required():
+        return jsonify({'error': 'Unauthorized'}), 403
+    data = request.json or {}
+    target_id = data.get('target_user_id')
+    tariff_id = data.get('tariff_id')
+    try:
+        target_id = int(target_id)
+    except Exception:
+        return jsonify({'error': 'Bad user id'}), 400
+    user = User.query.get(target_id)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    user.tariff_id = tariff_id
+    db.session.commit()
+    return jsonify({'ok': True})
+
+@app.route('/api/admin/user/set_balance', methods=['POST'])
+def admin_set_balance():
+    if not admin_required():
+        return jsonify({'error': 'Unauthorized'}), 403
+    data = request.json or {}
+    target_id = data.get('target_user_id')
+    balance = data.get('balance')
+    try:
+        target_id = int(target_id)
+    except Exception:
+        return jsonify({'error': 'Bad user id'}), 400
+    user = User.query.get(target_id)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    try:
+        user.balance = float(balance)
+    except Exception:
+        return jsonify({'error': 'Bad balance'}), 400
+    db.session.commit()
+    return jsonify({'ok': True})
+
+@app.route('/api/admin/user/delete', methods=['POST'])
+def admin_delete_user():
+    if not admin_required():
+        return jsonify({'error': 'Unauthorized'}), 403
+    data = request.json or {}
+    target_id = data.get('target_user_id')
+    try:
+        target_id = int(target_id)
+    except Exception:
+        return jsonify({'error': 'Bad user id'}), 400
+    user = User.query.get(target_id)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    ConfigItem.query.filter_by(user_id=user.id).delete()
+    db.session.delete(user)
+    db.session.commit()
+    return jsonify({'ok': True})
+
+@app.route('/api/admin/configs/list', methods=['POST'])
+def admin_configs_list():
+    if not admin_required():
+        return jsonify({'error': 'Unauthorized'}), 403
+    data = request.json or {}
+    target_id = data.get('target_user_id')
+    try:
+        target_id = int(target_id)
+    except Exception:
+        return jsonify({'error': 'Bad user id'}), 400
+    return jsonify([c.to_dict() for c in ConfigItem.query.filter_by(user_id=target_id).all()])
+
+@app.route('/api/admin/configs/add', methods=['POST'])
+def admin_configs_add():
+    if not admin_required():
+        return jsonify({'error': 'Unauthorized'}), 403
+    data = request.json or {}
+    target_id = data.get('target_user_id')
+    try:
+        target_id = int(target_id)
+    except Exception:
+        return jsonify({'error': 'Bad user id'}), 400
+    title = data.get('title') or 'Config'
+    protocol = data.get('protocol')
+    name = data.get('name')
+    config_text = data.get('config_text') or ''
+    item = ConfigItem(user_id=target_id, title=title, protocol=protocol, name=name, config_text=config_text)
+    db.session.add(item)
+    db.session.commit()
+    return jsonify(item.to_dict())
+
+@app.route('/api/admin/configs/delete', methods=['POST'])
+def admin_configs_delete():
+    if not admin_required():
+        return jsonify({'error': 'Unauthorized'}), 403
+    data = request.json or {}
+    config_id = data.get('config_id')
+    try:
+        config_id = int(config_id)
+    except Exception:
+        return jsonify({'error': 'Bad config id'}), 400
+    item = ConfigItem.query.get(config_id)
+    if not item:
+        return jsonify({'error': 'Not found'}), 404
+    db.session.delete(item)
+    db.session.commit()
+    return jsonify({'ok': True})
 
 @app.route('/user', methods=['GET'])
 def get_user():
