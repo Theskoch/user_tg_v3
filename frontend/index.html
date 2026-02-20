@@ -4,8 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Telegram Mini App</title>
-    <link rel="stylesheet" href="styles.css?v=123456789">
+    <link rel="stylesheet" href="styles.css?v=2026-02-20-2">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <base href="/">
 </head>
 <body>
@@ -63,8 +64,10 @@
         <div class="sheet-handle"></div>
         <h4 id="sheet-title">Подключение</h4>
         <div id="sheet-qr" class="sheet-qr"></div>
-        <div id="sheet-text" class="sheet-text"></div>
-        <button id="copy-config" class="btn">Скопировать</button>
+        <div class="sheet-text-row">
+            <div id="sheet-text" class="sheet-text" contenteditable="true"></div>
+            <button id="copy-config" class="icon-btn" type="button">📋</button>
+        </div>
         <button id="close-sheet" class="btn ghost">Закрыть</button>
     </div>
 
@@ -73,6 +76,6 @@
         <p>Функционал в разработке</p>
     </div>
 
-    <script src="app.js?v=123456789"></script>
+    <script src="app.js?v=2026-02-20-4"></script>
 </body>
 </html>

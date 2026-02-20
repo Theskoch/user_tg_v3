@@ -185,7 +185,14 @@ function openSheet(conn) {
   if (!sheet || !sheetOverlay) return;
   sheetTitle.textContent = conn.name;
   sheetText.textContent = conn.text;
-  sheetQr.textContent = 'QR';
+  if (sheetQr) {
+    sheetQr.innerHTML = '';
+    if (window.QRCode) {
+      new QRCode(sheetQr, { text: conn.text, width: 180, height: 180 });
+    } else {
+      sheetQr.textContent = 'QR';
+    }
+  }
   sheetOverlay.classList.remove('hidden');
   sheet.classList.remove('hidden');
 }

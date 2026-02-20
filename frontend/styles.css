@@ -151,6 +151,8 @@ header {
     padding: 14px;
     border-radius: 16px;
     backdrop-filter: blur(18px);
+    display: grid;
+    gap: 8px;
 }
 
 .connections-list {
@@ -252,6 +254,14 @@ header {
     font-size: 12px;
     word-break: break-all;
     margin-bottom: 12px;
+    outline: none;
+    flex: 1;
+}
+
+.sheet-text-row {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
 }
 
 .connections-list li {
