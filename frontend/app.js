@@ -77,7 +77,7 @@ const warnClose = document.getElementById('warn-close');
 const API_URL = window.location.origin;
 
 async function apiGet(path) {
-  const r = await fetch(path, { credentials: 'include' });
+  const r = await fetch(path, { credentials: 'include', cache: 'no-store' });
   if (!r.ok) throw new Error(await r.text());
   return r.json();
 }
@@ -544,7 +544,7 @@ async function loadAdminConfigs() {
       </div>
     `;
     const [openBtn, delBtn] = card.querySelectorAll('button');
-    openBtn.addEventListener('click', () => openSheet({ id: c.id, name: c.name || c.title, text: c.config_text }));
+    openBtn.addEventListener('click', () => handleConfigOpen(c));
     delBtn.addEventListener('click', async () => {
       await apiPost(`${API_URL}/api/admin/configs/delete`, { config_id: c.id });
       await loadAdminConfigs();
@@ -600,7 +600,7 @@ addOverlay?.addEventListener('click', closeAddSheet);
 
 addSave?.addEventListener('click', async () => {
   if (!ADMIN_SELECTED) return;
-  const txt = addText.value.trim();
+  const txt = (addText.value || '').replace(/\u0000/g, '').trim();
   if (!txt) return;
   await apiPost(`${API_URL}/api/admin/configs/add`, {
     target_user_id: ADMIN_SELECTED.id,
@@ -669,7 +669,10 @@ function scanQrLoop() {
   const img = ctx.getImageData(0, 0, qrCanvas.width, qrCanvas.height);
   const code = window.jsQR ? window.jsQR(img.data, img.width, img.height) : null;
   if (code && code.data) {
-    addText.value = code.data;
+    const cleaned = String(code.data || '').replace(/\u0000/g, '').trim();
+    if (cleaned) {
+      addText.value = cleaned;
+    }
     qrScanned = true;
     stopQr();
     return;

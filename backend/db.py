@@ -56,13 +56,14 @@ class ConfigItem(db.Model):
     is_used = Column(Boolean, default=False)
 
     def to_dict(self):
+        safe_text = (self.config_text or '').replace('\u0000', '')
         return {
             'id': self.id,
             'user_id': self.user_id,
             'title': self.title,
             'protocol': self.protocol,
             'name': self.name,
-            'config_text': self.config_text,
+            'config_text': safe_text,
             'created_at': self.created_at.isoformat() if self.created_at else None
             , 'is_used': self.is_used
         }
