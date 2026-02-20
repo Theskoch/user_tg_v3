@@ -373,6 +373,7 @@ async function loadAdminConfigs() {
     delBtn.addEventListener('click', async () => {
       await apiPost(`${API_URL}/api/admin/configs/delete`, { config_id: c.id });
       await loadAdminConfigs();
+      await renderConnections();
     });
     adminConfigsBox.appendChild(card);
   });
@@ -429,6 +430,7 @@ addSave?.addEventListener('click', async () => {
   });
   closeAddSheet();
   await loadAdminConfigs();
+  await renderConnections();
 });
 
 let qrStream = null;
