@@ -38,6 +38,7 @@ let CURRENT_OPEN_CONFIG = null;
 const sheetText = document.getElementById('sheet-text');
 const sheetQr = document.getElementById('sheet-qr');
 const copyConfigBtn = document.getElementById('copy-config');
+const copyToast = document.getElementById('copy-toast');
 const closeSheetBtn = document.getElementById('close-sheet');
 const adminPage = document.getElementById('admin-page');
 const adminBack = document.getElementById('admin-back');
@@ -445,6 +446,14 @@ copyConfigBtn?.addEventListener('click', async () => {
       ta.select();
       document.execCommand('copy');
       document.body.removeChild(ta);
+    }
+    if (copyConfigBtn) {
+      copyConfigBtn.classList.add('copy-pressed');
+      setTimeout(() => copyConfigBtn.classList.remove('copy-pressed'), 180);
+    }
+    if (copyToast) {
+      copyToast.classList.add('show');
+      setTimeout(() => copyToast.classList.remove('show'), 1800);
     }
   } catch {}
 });
