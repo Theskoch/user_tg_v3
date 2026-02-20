@@ -18,9 +18,11 @@ CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 db.init_app(app)
 
 # Configure session to work behind proxy
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', secrets.token_hex(16))
 app.config['SESSION_COOKIE_SECURE'] = True
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['PREFERRED_URL_SCHEME'] = 'https'  # Important for HTTPS proxy
 
 # Telegram Bot Setup
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
