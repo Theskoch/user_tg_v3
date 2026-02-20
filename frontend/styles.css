@@ -180,6 +180,11 @@ header {
     cursor: pointer;
 }
 
+.conn-card.used {
+    opacity: 0.5;
+    filter: grayscale(1);
+}
+
 .conn-title { font-weight: 700; margin-bottom: 6px; }
 .conn-sub { opacity: 0.7; font-size: 13px; }
 

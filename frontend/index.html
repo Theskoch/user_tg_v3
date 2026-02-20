@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Telegram Mini App</title>
-    <link rel="stylesheet" href="styles.css?v=2026-02-20-5">
+    <link rel="stylesheet" href="styles.css?v=2026-02-20-6">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
@@ -113,6 +113,17 @@
         </div>
     </div>
 
+    <div id="warn-overlay" class="sheet-overlay hidden"></div>
+    <div id="warn-sheet" class="sheet hidden">
+        <div class="sheet-handle"></div>
+        <h4>Внимание</h4>
+        <p class="conn-sub">Уважаемый пользователь, данный конфиг уже был использован. Мы не рекомендуем использовать 1 конфиг на нескольких устройствах.</p>
+        <div class="row" style="display:grid; gap:8px;">
+            <button id="warn-view" class="btn" style="background:#ff5d5d;">Просмотреть</button>
+            <button id="warn-close" class="btn" style="background:#41c36f;">Закрыть</button>
+        </div>
+    </div>
+
     <div id="admin-user-page" class="page hidden">
         <header>
             <div class="user-avatar" id="user-initial-admin-user"></div>
@@ -128,6 +139,7 @@
 
         <div class="card glass">
             <h3>Баланс</h3>
+            <div id="admin-balance-current" class="conn-sub">Текущий: 0.00 ₽</div>
             <input id="admin-balance" class="sheet-text" placeholder="0.00" />
             <button id="admin-balance-save" class="btn">Сохранить баланс</button>
         </div>
@@ -141,6 +153,6 @@
         <button id="admin-user-delete" class="btn ghost">Удалить пользователя</button>
     </div>
 
-    <script src="app.js?v=2026-02-20-14"></script>
+    <script src="app.js?v=2026-02-20-18"></script>
 </body>
 </html>

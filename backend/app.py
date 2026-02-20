@@ -80,6 +80,16 @@ def ensure_schema():
     except Exception:
         db.session.rollback()
 
+    # ensure configs.is_used exists
+    try:
+        res = db.session.execute(text("PRAGMA table_info(configs)"))
+        cols = {row[1] for row in res}
+        if 'is_used' not in cols:
+            db.session.execute(text("ALTER TABLE configs ADD COLUMN is_used BOOLEAN DEFAULT 0"))
+            db.session.commit()
+    except Exception:
+        db.session.rollback()
+
 @app.route('/auth', methods=['POST'])
 def authenticate():
     data = request.json
@@ -310,6 +320,24 @@ def user_configs():
         return jsonify({'error': 'Not authenticated'}), 401
     configs = ConfigItem.query.filter_by(user_id=user_id).all()
     return jsonify([c.to_dict() for c in configs])
+
+@app.route('/api/configs/mark_used', methods=['POST'])
+def user_config_mark_used():
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'error': 'Not authenticated'}), 401
+    data = request.json or {}
+    config_id = data.get('config_id')
+    try:
+        config_id = int(config_id)
+    except Exception:
+        return jsonify({'error': 'Bad config id'}), 400
+    item = ConfigItem.query.get(config_id)
+    if not item or item.user_id != user_id:
+        return jsonify({'error': 'Not found'}), 404
+    item.is_used = True
+    db.session.commit()
+    return jsonify({'ok': True})
 
 @app.route('/user', methods=['GET'])
 def get_user():

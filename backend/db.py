@@ -47,6 +47,7 @@ class ConfigItem(db.Model):
     name = Column(String, nullable=True)
     config_text = Column(Text, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+    is_used = Column(Boolean, default=False)
 
     def to_dict(self):
         return {
@@ -57,4 +58,5 @@ class ConfigItem(db.Model):
             'name': self.name,
             'config_text': self.config_text,
             'created_at': self.created_at.isoformat() if self.created_at else None
+            , 'is_used': self.is_used
         }

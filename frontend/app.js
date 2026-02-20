@@ -42,6 +42,7 @@ const adminTariffSelect = document.getElementById('admin-tariff');
 const adminTariffSave = document.getElementById('admin-tariff-save');
 const adminBalanceInput = document.getElementById('admin-balance');
 const adminBalanceSave = document.getElementById('admin-balance-save');
+const adminBalanceCurrent = document.getElementById('admin-balance-current');
 const adminConfigsBox = document.getElementById('admin-configs');
 const adminConfigAdd = document.getElementById('admin-config-add');
 const adminUserDelete = document.getElementById('admin-user-delete');
@@ -54,6 +55,10 @@ const addSave = document.getElementById('add-save');
 const addCancel = document.getElementById('add-cancel');
 const qrVideo = document.getElementById('qr-video');
 const qrCanvas = document.getElementById('qr-canvas');
+const warnOverlay = document.getElementById('warn-overlay');
+const warnSheet = document.getElementById('warn-sheet');
+const warnView = document.getElementById('warn-view');
+const warnClose = document.getElementById('warn-close');
 
 // API URL
 const API_URL = window.location.origin;
@@ -238,17 +243,62 @@ async function renderConnections() {
     configs.forEach(c => {
       const card = document.createElement('div');
       card.className = 'conn-card';
+      if (c.is_used) card.classList.add('used');
       card.innerHTML = `
         <div class="conn-title">${c.name || c.title || 'Config'}</div>
         <div class="conn-sub">${(c.protocol || '—')} • ${String(c.config_text || '').slice(0, 18)}...</div>
       `;
-      card.addEventListener('click', () => openSheet({ name: c.name || c.title, text: c.config_text }));
+      card.addEventListener('click', () => handleConfigOpen(c));
       connectionsBox.appendChild(card);
     });
   } catch {
     connectionsBox.innerHTML = '<div class="conn-sub">Ошибка загрузки</div>';
   }
 }
+
+function handleConfigOpen(c) {
+  if (c.is_used) {
+    openWarnSheet(c);
+  } else {
+    markUsedAndOpen(c);
+  }
+}
+
+async function markUsedAndOpen(c) {
+  try {
+    await apiPost(`${API_URL}/api/configs/mark_used`, { config_id: c.id });
+  } catch {}
+  await renderConnections();
+  openSheet({ name: c.name || c.title, text: c.config_text });
+}
+
+let warnConfig = null;
+function openWarnSheet(c) {
+  warnConfig = c;
+  warnOverlay?.classList.remove('hidden');
+  warnSheet?.classList.remove('hidden');
+}
+
+function closeWarnSheet() {
+  warnOverlay?.classList.add('hidden');
+  warnSheet?.classList.add('hidden');
+  warnConfig = null;
+}
+
+warnClose?.addEventListener('click', () => {
+  closeWarnSheet();
+});
+
+warnOverlay?.addEventListener('click', () => {
+  closeWarnSheet();
+});
+
+warnView?.addEventListener('click', () => {
+  if (warnConfig) {
+    openSheet({ name: warnConfig.name || warnConfig.title, text: warnConfig.config_text });
+  }
+  closeWarnSheet();
+});
 
 function openSheet(conn) {
   if (!sheet || !sheetOverlay) return;
@@ -348,7 +398,11 @@ async function openAdminUser(u) {
     adminTariffSelect.value = u.tariff_id ? String(u.tariff_id) : '';
   }
   if (adminBalanceInput) {
-    adminBalanceInput.value = (Number(u.balance || 0)).toFixed(2);
+    const current = (Number(u.balance || 0)).toFixed(2);
+    adminBalanceInput.value = current;
+    if (adminBalanceCurrent) {
+      adminBalanceCurrent.textContent = `Текущий: ${current} ₽`;
+    }
   }
   await loadAdminConfigs();
 }
@@ -408,6 +462,10 @@ adminBalanceSave?.addEventListener('click', async () => {
     target_user_id: ADMIN_SELECTED.id,
     balance: adminBalanceInput.value
   });
+  const current = Number(adminBalanceInput.value || 0).toFixed(2);
+  if (adminBalanceCurrent) {
+    adminBalanceCurrent.textContent = `Текущий: ${current} ₽`;
+  }
   await loadAdminUsers();
 });
 
