@@ -22,7 +22,7 @@
     <div id="user-page" class="page hidden">
         <header>
             <div class="user-avatar" id="user-initial"></div>
-            <div class="balance" id="user-balance">0 ₽</div>
+            <button class="balance" id="user-balance" type="button">0 ₽</button>
             <div class="menu-icon" id="menu-toggle">
                 <div class="bar"></div>
                 <div class="bar"></div>
@@ -37,8 +37,35 @@
 
         <div class="connections-list">
             <h3>Мои подключения</h3>
-            <ul id="connections"></ul>
+            <div id="connections" class="connections-grid"></div>
         </div>
+    </div>
+
+    <div id="topup-page" class="page hidden">
+        <header>
+            <div class="user-avatar" id="user-initial-topup"></div>
+            <button class="balance" id="user-balance-topup" type="button">0 ₽</button>
+            <button id="topup-back" class="icon-btn" type="button">←</button>
+        </header>
+
+        <div class="card glass">
+            <h3>Способы пополнения</h3>
+            <div class="pay-methods">
+                <button class="pay-card">Crypto</button>
+                <button class="pay-card">Stars</button>
+                <button class="pay-card">Перевод</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="sheet-overlay" class="sheet-overlay hidden"></div>
+    <div id="sheet" class="sheet hidden">
+        <div class="sheet-handle"></div>
+        <h4 id="sheet-title">Подключение</h4>
+        <div id="sheet-qr" class="sheet-qr"></div>
+        <div id="sheet-text" class="sheet-text"></div>
+        <button id="copy-config" class="btn">Скопировать</button>
+        <button id="close-sheet" class="btn ghost">Закрыть</button>
     </div>
 
     <div id="admin-page" class="page hidden">
@@ -46,6 +73,6 @@
         <p>Функционал в разработке</p>
     </div>
 
-    <script src="app.js?v=2026-02-20-1"></script>
+    <script src="app.js?v=2026-02-20-2"></script>
 </body>
 </html>

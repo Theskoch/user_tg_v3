@@ -14,6 +14,21 @@ const userInitial = document.getElementById('user-initial');
 const userBalance = document.getElementById('user-balance');
 const adminBtn = document.getElementById('admin-btn');
 const debugPanel = document.getElementById('debug-panel');
+const menuToggle = document.getElementById('menu-toggle');
+const sideMenu = document.getElementById('side-menu');
+const replenishBtn = document.getElementById('replenish-btn');
+const topupPage = document.getElementById('topup-page');
+const topupBack = document.getElementById('topup-back');
+const userInitialTopup = document.getElementById('user-initial-topup');
+const userBalanceTopup = document.getElementById('user-balance-topup');
+const connectionsBox = document.getElementById('connections');
+const sheet = document.getElementById('sheet');
+const sheetOverlay = document.getElementById('sheet-overlay');
+const sheetTitle = document.getElementById('sheet-title');
+const sheetText = document.getElementById('sheet-text');
+const sheetQr = document.getElementById('sheet-qr');
+const copyConfigBtn = document.getElementById('copy-config');
+const closeSheetBtn = document.getElementById('close-sheet');
 
 // API URL
 const API_URL = window.location.origin;
@@ -90,6 +105,12 @@ loginBtn.addEventListener('click', async () => {
             
             // Set balance
             userBalance.textContent = `${userData.balance.toFixed(2)} ₽`;
+            if (userBalanceTopup) {
+              userBalanceTopup.textContent = `${userData.balance.toFixed(2)} ₽`;
+            }
+            if (userInitialTopup) {
+              userInitialTopup.textContent = userInitial.textContent;
+            }
             
             // Show/hide admin button based on user role
             if (userData.is_admin) {
@@ -105,6 +126,82 @@ loginBtn.addEventListener('click', async () => {
             debugPanel.textContent += `\nerror=${error?.message || String(error)}`;
         }
     }
+});
+
+// Basic menu toggle
+if (menuToggle && sideMenu) {
+  menuToggle.addEventListener('click', () => {
+    sideMenu.classList.toggle('hidden');
+  });
+}
+
+// Top up navigation
+if (replenishBtn && topupPage) {
+  replenishBtn.addEventListener('click', () => {
+    userPage.classList.add('hidden');
+    topupPage.classList.remove('hidden');
+    sideMenu?.classList.add('hidden');
+  });
+}
+
+if (userBalance && topupPage) {
+  userBalance.addEventListener('click', () => {
+    userPage.classList.add('hidden');
+    topupPage.classList.remove('hidden');
+  });
+}
+
+if (topupBack) {
+  topupBack.addEventListener('click', () => {
+    topupPage.classList.add('hidden');
+    userPage.classList.remove('hidden');
+  });
+}
+
+// Connections placeholder
+function renderConnections() {
+  if (!connectionsBox) return;
+  connectionsBox.innerHTML = '';
+
+  const dummy = {
+    title: 'Connection #1',
+    proto: 'VLESS',
+    name: 'NL-1 Amsterdam',
+    text: 'vless://example-connection-text'
+  };
+
+  const card = document.createElement('div');
+  card.className = 'conn-card';
+  card.innerHTML = `
+    <div class="conn-title">${dummy.name}</div>
+    <div class="conn-sub">${dummy.proto} • ${dummy.title}</div>
+    <div class="conn-sub">${dummy.text.slice(0, 18)}...</div>
+  `;
+  card.addEventListener('click', () => openSheet(dummy));
+  connectionsBox.appendChild(card);
+}
+
+function openSheet(conn) {
+  if (!sheet || !sheetOverlay) return;
+  sheetTitle.textContent = conn.name;
+  sheetText.textContent = conn.text;
+  sheetQr.textContent = 'QR';
+  sheetOverlay.classList.remove('hidden');
+  sheet.classList.remove('hidden');
+}
+
+function closeSheet() {
+  sheetOverlay?.classList.add('hidden');
+  sheet?.classList.add('hidden');
+}
+
+sheetOverlay?.addEventListener('click', closeSheet);
+closeSheetBtn?.addEventListener('click', closeSheet);
+
+copyConfigBtn?.addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText(sheetText.textContent || '');
+  } catch {}
 });
 
 // Auto-login on load if user already exists
@@ -149,3 +246,4 @@ async function tryAutoLogin() {
 }
 
 tryAutoLogin();
+renderConnections();
