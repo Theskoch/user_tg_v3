@@ -1,14 +1,21 @@
+* { box-sizing: border-box; }
+
 body {
-    font-family: Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", sans-serif;
     margin: 0;
     padding: 0;
-    background-color: #f0f0f0;
+    color: #eaeaea;
+    background: radial-gradient(1200px 800px at 10% -10%, #2a2f3a 0%, rgba(18,19,24,0.95) 55%),
+                radial-gradient(1000px 600px at 100% 0%, rgba(64,83,255,0.25) 0%, rgba(18,19,24,0.95) 60%),
+                #0f1116;
 }
 
 .page {
     display: flex;
     flex-direction: column;
-    height: 100vh;
+    min-height: 100vh;
+    padding: 24px 18px 32px;
+    gap: 16px;
 }
 
 .hidden {
@@ -17,20 +24,45 @@ body {
 
 /* Login Page */
 .login-container {
-    max-width: 300px;
+    max-width: 360px;
     margin: auto;
-    padding: 20px;
+    padding: 24px 22px;
     text-align: center;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 18px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.35);
+    backdrop-filter: blur(18px) saturate(1.2);
 }
 
 #access-code {
     width: 100%;
-    padding: 10px;
-    margin: 10px 0;
+    padding: 12px 14px;
+    margin: 12px 0 8px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.08);
+    color: #fff;
+    outline: none;
+    font-size: 16px;
+}
+
+#access-code::placeholder { color: rgba(255,255,255,0.5); }
+
+#login-btn, #replenish-btn, #admin-btn {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: none;
+    background: linear-gradient(135deg, rgba(110,140,255,0.9), rgba(80,106,255,0.85));
+    color: white;
+    font-size: 16px;
+    font-weight: 600;
+    box-shadow: 0 8px 22px rgba(48,80,255,0.35);
 }
 
 .error {
-    color: red;
+    color: #ff8a8a;
     margin-top: 10px;
 }
 
@@ -39,26 +71,35 @@ header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 15px;
-    background-color: #4a4a4a;
-    color: white;
+    padding: 14px 16px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 18px;
+    backdrop-filter: blur(20px);
+    box-shadow: 0 12px 30px rgba(0,0,0,0.35);
 }
 
 .user-avatar {
-    width: 50px;
-    height: 50px;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
-    background-color: #007bff;
+    background: linear-gradient(135deg, rgba(98,156,255,0.9), rgba(74,97,255,0.9));
     display: flex;
     justify-content: center;
     align-items: center;
-    font-weight: bold;
-    font-size: 24px;
+    font-weight: 700;
+    font-size: 18px;
+    letter-spacing: 0.5px;
+    box-shadow: 0 8px 18px rgba(48,80,255,0.35);
 }
 
 .balance {
-    font-size: 20px;
-    font-weight: bold;
+    font-size: 18px;
+    font-weight: 700;
+    background: rgba(255,255,255,0.06);
+    padding: 8px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.12);
 }
 
 .menu-icon {
@@ -66,24 +107,28 @@ header {
 }
 
 .menu-icon .bar {
-    width: 25px;
+    width: 24px;
     height: 3px;
-    background-color: white;
+    background-color: rgba(255,255,255,0.9);
     margin: 5px 0;
+    border-radius: 6px;
 }
 
 .side-menu {
     position: fixed;
-    top: 80px;
-    right: 0;
-    width: 200px;
-    background-color: white;
-    box-shadow: -2px 0 5px rgba(0,0,0,0.1);
-    padding: 15px;
+    top: 90px;
+    right: 18px;
+    width: 220px;
+    background: rgba(20,22,28,0.8);
+    border: 1px solid rgba(255,255,255,0.12);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.45);
+    padding: 14px;
+    border-radius: 16px;
+    backdrop-filter: blur(18px);
 }
 
 .connections-list {
-    padding: 15px;
+    padding: 6px 4px 0;
 }
 
 .connections-list ul {
@@ -92,9 +137,11 @@ header {
 }
 
 .connections-list li {
-    background-color: white;
-    margin: 10px 0;
-    padding: 10px;
-    border-radius: 5px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    background: rgba(255,255,255,0.06);
+    margin: 12px 0;
+    padding: 14px 12px;
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 10px 24px rgba(0,0,0,0.35);
+    backdrop-filter: blur(14px);
 }
