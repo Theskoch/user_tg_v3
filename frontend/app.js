@@ -76,8 +76,28 @@ const warnClose = document.getElementById('warn-close');
 // API URL
 const API_URL = window.location.origin;
 
+function saveTelegramUser(user) {
+  try {
+    if (user?.id) {
+      localStorage.setItem('tg_user', JSON.stringify(user));
+    }
+  } catch {}
+}
+
+function getStoredTelegramUser() {
+  try {
+    const raw = localStorage.getItem('tg_user');
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
 function getTelegramId() {
-  return window.Telegram?.WebApp?.initDataUnsafe?.user?.id || null;
+  const liveId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id || null;
+  if (liveId) return liveId;
+  const stored = getStoredTelegramUser();
+  return stored?.id || null;
 }
 
 function getAuthHeaders() {
@@ -152,6 +172,7 @@ loginBtn.addEventListener('click', async () => {
             first_name: tg.initDataUnsafe.user.first_name,
             last_name: tg.initDataUnsafe.user.last_name
         };
+        saveTelegramUser(telegramUser);
         
         // Send authentication request
         const response = await fetch(`${API_URL}/auth`, {
@@ -424,21 +445,28 @@ function openSheet(conn) {
       const size = 180;
 
       if (window.QRCode && window.QRCode.toCanvas) {
-        const canvas = document.createElement('canvas');
-        sheetQr.appendChild(canvas);
-        window.QRCode.toCanvas(canvas, rawText, { width: size, margin: 1 }, (err) => {
-          if (err) {
-            window.QRCode.toCanvas(canvas, trimmed, { width: size, margin: 1 }, (err2) => {
-              if (err2) {
-                sheetQr.textContent = 'QR слишком длинный';
-              }
-            });
+        const img = document.createElement('img');
+        img.alt = 'QR';
+        img.style.width = `${size}px`;
+        img.style.height = `${size}px`;
+        img.style.display = 'block';
+        img.style.margin = '0 auto';
+        img.style.objectFit = 'contain';
+        sheetQr.appendChild(img);
+
+        window.QRCode.toDataURL(rawText, { width: size, margin: 0 }, (err, url) => {
+          if (!err && url) {
+            img.src = url;
+            return;
           }
+          window.QRCode.toDataURL(trimmed, { width: size, margin: 0 }, (err2, url2) => {
+            if (!err2 && url2) {
+              img.src = url2;
+              return;
+            }
+            sheetQr.textContent = 'QR слишком длинный';
+          });
         });
-        canvas.style.width = `${size}px`;
-        canvas.style.height = `${size}px`;
-        canvas.style.display = 'block';
-        canvas.style.margin = '0 auto';
       } else {
         sheetQr.textContent = 'QR';
       }
@@ -748,6 +776,7 @@ async function tryAutoLogin() {
       first_name: tg.initDataUnsafe.user.first_name,
       last_name: tg.initDataUnsafe.user.last_name
     };
+    saveTelegramUser(telegramUser);
 
     const response = await fetch(`${API_URL}/auth`, {
       method: 'POST',
