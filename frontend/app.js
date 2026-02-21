@@ -355,11 +355,16 @@ async function renderConnections() {
   }
 }
 
-function handleConfigOpen(c) {
-  if (c.is_used) {
+function handleConfigOpen(c, options = {}) {
+  const { ignoreUsedWarning = false, markUsed = true } = options;
+  if (!ignoreUsedWarning && c.is_used) {
     openWarnSheet(c);
   } else {
-    markUsedAndOpen(c);
+    if (markUsed) {
+      markUsedAndOpen(c);
+    } else {
+      openSheet({ id: c.id, name: c.name || c.title, text: c.config_text });
+    }
   }
 }
 
@@ -424,21 +429,31 @@ function openSheet(conn) {
       }
       const qrEl = sheetQr.querySelector('canvas, img, table');
       if (qrEl) {
-        const boxSize = size;
-        const rect = qrEl.getBoundingClientRect();
-        const naturalW = rect.width || qrEl.offsetWidth || boxSize;
-        const naturalH = rect.height || qrEl.offsetHeight || boxSize;
-        const scale = Math.min(boxSize / naturalW, boxSize / naturalH, 1);
+        const rebuilt = rebuildQrToCanvas(qrEl, size);
+        if (rebuilt) {
+          sheetQr.innerHTML = '';
+          rebuilt.style.width = `${size}px`;
+          rebuilt.style.height = `${size}px`;
+          rebuilt.style.display = 'block';
+          rebuilt.style.margin = '0 auto';
+          sheetQr.appendChild(rebuilt);
+        } else {
+          const boxSize = size;
+          const rect = qrEl.getBoundingClientRect();
+          const naturalW = rect.width || qrEl.offsetWidth || boxSize;
+          const naturalH = rect.height || qrEl.offsetHeight || boxSize;
+          const scale = Math.min(boxSize / naturalW, boxSize / naturalH, 1);
 
-        qrEl.style.position = 'absolute';
-        qrEl.style.left = '50%';
-        qrEl.style.top = '50%';
-        qrEl.style.transform = `translate(-50%, -50%) scale(${scale})`;
-        qrEl.style.transformOrigin = 'center center';
-        qrEl.style.width = `${naturalW}px`;
-        qrEl.style.height = `${naturalH}px`;
-        qrEl.style.maxWidth = 'none';
-        qrEl.style.maxHeight = 'none';
+          qrEl.style.position = 'absolute';
+          qrEl.style.left = '50%';
+          qrEl.style.top = '50%';
+          qrEl.style.transform = `translate(-50%, -50%) scale(${scale})`;
+          qrEl.style.transformOrigin = 'center center';
+          qrEl.style.width = `${naturalW}px`;
+          qrEl.style.height = `${naturalH}px`;
+          qrEl.style.maxWidth = 'none';
+          qrEl.style.maxHeight = 'none';
+        }
       }
     } else {
       sheetQr.textContent = 'QR';
@@ -584,7 +599,7 @@ async function loadAdminConfigs() {
       </div>
     `;
     const [openBtn, delBtn] = card.querySelectorAll('button');
-    openBtn.addEventListener('click', () => handleConfigOpen(c));
+    openBtn.addEventListener('click', () => handleConfigOpen(c, { ignoreUsedWarning: true, markUsed: false }));
     delBtn.addEventListener('click', async () => {
       await apiPost(`${API_URL}/api/admin/configs/delete`, { config_id: c.id });
       await loadAdminConfigs();
