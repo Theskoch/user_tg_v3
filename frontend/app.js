@@ -75,10 +75,14 @@ const warnClose = document.getElementById('warn-close');
 
 // API URL
 const API_URL = window.location.origin;
-const TELEGRAM_ID = window.Telegram?.WebApp?.initDataUnsafe?.user?.id || null;
+
+function getTelegramId() {
+  return window.Telegram?.WebApp?.initDataUnsafe?.user?.id || null;
+}
 
 function getAuthHeaders() {
-  return TELEGRAM_ID ? { 'X-Telegram-Id': String(TELEGRAM_ID) } : {};
+  const telegramId = getTelegramId();
+  return telegramId ? { 'X-Telegram-Id': String(telegramId) } : {};
 }
 
 async function apiGet(path) {
@@ -435,17 +439,6 @@ function openSheet(conn) {
         canvas.style.height = `${size}px`;
         canvas.style.display = 'block';
         canvas.style.margin = '0 auto';
-      } else if (window.QRCode) {
-        // fallback to old generator
-        try {
-          new QRCode(sheetQr, { text: rawText, width: size, height: size });
-        } catch (e) {
-          try {
-            new QRCode(sheetQr, { text: trimmed, width: size, height: size });
-          } catch {
-            sheetQr.textContent = 'QR слишком длинный';
-          }
-        }
       } else {
         sheetQr.textContent = 'QR';
       }
