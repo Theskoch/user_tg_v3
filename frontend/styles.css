@@ -371,8 +371,10 @@ button:active,
 }
 
 .sheet-qr {
-    height: 180px;
-    width: 180px;
+    height: 70vw;
+    width: 70vw;
+    max-width: 360px;
+    max-height: 360px;
     margin: 12px auto;
     background: rgba(16,18,24,0.8);
     border-radius: 16px;
