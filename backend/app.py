@@ -9,6 +9,10 @@ from flask_cors import CORS
 from config import Config
 from db import db, User, OneTimeCode, ConfigItem
 import telebot
+import io
+import base64
+import qrcode
+from PIL import Image
 from werkzeug.middleware.proxy_fix import ProxyFix
 from sqlalchemy import text
 
@@ -490,6 +494,31 @@ def get_user():
         data['tariff_price_rub'] = t.get('price_rub')
         data['tariff_period_months'] = t.get('period_months')
     return jsonify(data)
+
+@app.route('/api/qr', methods=['POST'])
+def generate_qr():
+    data = request.json or {}
+    text = data.get('text') or ''
+    size = int(data.get('size') or 320)
+    if not text:
+        return jsonify({'error': 'No text'}), 400
+    size = max(120, min(size, 720))
+
+    qr = qrcode.QRCode(
+        version=None,
+        error_correction=qrcode.constants.ERROR_CORRECT_M,
+        box_size=10,
+        border=0
+    )
+    qr.add_data(text)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white").convert("RGB")
+    img = img.resize((size, size), Image.NEAREST)
+
+    buf = io.BytesIO()
+    img.save(buf, format='PNG')
+    encoded = base64.b64encode(buf.getvalue()).decode('utf-8')
+    return jsonify({'url': f"data:image/png;base64,{encoded}"})
 
 @app.route('/admin', methods=['GET'])
 def admin_panel():

@@ -458,53 +458,35 @@ function openSheet(conn) {
       sheetQr.style.width = `${size}px`;
       sheetQr.style.height = `${size}px`;
 
-      loadQrLib()
-        .then((qrLib) => {
-          if (!qrLib) throw new Error('QR lib missing');
-          if (typeof qrLib.toDataURL === 'function') {
-            const img = document.createElement('img');
-            img.alt = 'QR';
-            img.style.width = `${size}px`;
-            img.style.height = `${size}px`;
-            img.style.display = 'block';
-            img.style.margin = '0 auto';
-            img.style.objectFit = 'contain';
-            sheetQr.appendChild(img);
+      const img = document.createElement('img');
+      img.alt = 'QR';
+      img.style.width = `${size}px`;
+      img.style.height = `${size}px`;
+      img.style.display = 'block';
+      img.style.margin = '0 auto';
+      img.style.objectFit = 'contain';
+      sheetQr.appendChild(img);
 
-            qrLib.toDataURL(rawText, { width: size, margin: 0 }, (err, url) => {
-              if (!err && url) {
-                img.src = url;
-                return;
-              }
-              qrLib.toDataURL(trimmed, { width: size, margin: 0 }, (err2, url2) => {
-                if (!err2 && url2) {
-                  img.src = url2;
-                  return;
-                }
-                sheetQr.textContent = 'QR слишком длинный';
-              });
-            });
-          } else if (typeof qrLib.toCanvas === 'function') {
-            const canvas = document.createElement('canvas');
-            sheetQr.appendChild(canvas);
-            qrLib.toCanvas(canvas, rawText, { width: size, margin: 0 }, (err) => {
-              if (err) {
-                qrLib.toCanvas(canvas, trimmed, { width: size, margin: 0 }, (err2) => {
-                  if (err2) sheetQr.textContent = 'QR слишком длинный';
-                });
-              }
-            });
-            canvas.style.width = `${size}px`;
-            canvas.style.height = `${size}px`;
-            canvas.style.display = 'block';
-            canvas.style.margin = '0 auto';
+      apiPost(`${API_URL}/api/qr`, { text: rawText, size })
+        .then((res) => {
+          if (res?.url) {
+            img.src = res.url;
           } else {
             sheetQr.textContent = 'QR недоступен';
           }
         })
-        .catch((e) => {
-          console.warn('QR render error', e);
-          sheetQr.textContent = 'QR недоступен';
+        .catch(() => {
+          apiPost(`${API_URL}/api/qr`, { text: trimmed, size })
+            .then((res) => {
+              if (res?.url) {
+                img.src = res.url;
+              } else {
+                sheetQr.textContent = 'QR недоступен';
+              }
+            })
+            .catch(() => {
+              sheetQr.textContent = 'QR недоступен';
+            });
         });
     } catch (e) {
       console.warn('QR render error', e);
