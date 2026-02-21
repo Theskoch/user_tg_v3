@@ -36,12 +36,12 @@ def serve_static(path):
     return send_from_directory(FRONTEND_DIR, path)
 
 # Configure session 
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', secrets.token_hex(16))
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-
-# Disable secure cookie for local development
 app.config['SESSION_COOKIE_SECURE'] = False
+app.config['SESSION_COOKIE_MAX_AGE'] = 60 * 60 * 24 * 365 * 10
+
+# Disable secure cookie for local development (already set above)
 
 # Telegram Bot Setup
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
@@ -56,6 +56,16 @@ def load_tariffs():
             return json.load(f).get('tariffs', [])
     except Exception:
         return []
+
+def get_auth_user():
+    telegram_id = request.headers.get('X-Telegram-Id')
+    try:
+        telegram_id = int(telegram_id) if telegram_id else None
+    except Exception:
+        telegram_id = None
+    if not telegram_id:
+        return None
+    return User.query.filter_by(telegram_id=telegram_id).first()
 
 def add_months(dt: datetime, months: int) -> datetime:
     if not dt:
@@ -228,7 +238,6 @@ def authenticate():
     # If user already exists, auto-login without code
     existing_user = User.query.filter_by(telegram_id=telegram_data['id']).first()
     if existing_user:
-        session['user_id'] = existing_user.id
         return jsonify({
             'success': True,
             'is_admin': existing_user.is_admin,
@@ -246,8 +255,8 @@ def authenticate():
     if one_time_code.used_at:
         return jsonify({'success': False, 'message': 'Код уже использован'})
     
-    # Check code expiration (24 hours)
-    if one_time_code.created_at < datetime.utcnow() - timedelta(hours=24):
+    # Check code expiration (1 hour)
+    if one_time_code.created_at < datetime.utcnow() - timedelta(hours=1):
         return jsonify({'success': False, 'message': 'Код просрочен'})
     
     # Create user
@@ -266,9 +275,6 @@ def authenticate():
     one_time_code.used_at = datetime.utcnow()
     db.session.commit()
     
-    # Create session
-    session['user_id'] = user_id
-    
     user = User.query.get(user_id)
     return jsonify({
         'success': True,
@@ -279,8 +285,7 @@ def authenticate():
 @app.route('/generate_code', methods=['POST'])
 def generate_code():
     # Only allow admin to generate codes
-    user_id = session.get('user_id')
-    user = User.query.get(user_id)
+    user = get_auth_user()
     
     if not user or not user.is_admin:
         return jsonify({'error': 'Unauthorized'}), 403
@@ -308,8 +313,7 @@ def api_tariffs():
     return jsonify({'tariffs': load_tariffs()})
 
 def admin_required():
-    user_id = session.get('user_id')
-    user = User.query.get(user_id) if user_id else None
+    user = get_auth_user()
     if not user or not user.is_admin:
         return None
     return user
@@ -448,16 +452,16 @@ def admin_configs_delete():
 
 @app.route('/api/configs', methods=['GET'])
 def user_configs():
-    user_id = session.get('user_id')
-    if not user_id:
+    user = get_auth_user()
+    if not user:
         return jsonify({'error': 'Not authenticated'}), 401
-    configs = ConfigItem.query.filter_by(user_id=user_id).all()
+    configs = ConfigItem.query.filter_by(user_id=user.id).all()
     return jsonify([c.to_dict() for c in configs])
 
 @app.route('/api/configs/mark_used', methods=['POST'])
 def user_config_mark_used():
-    user_id = session.get('user_id')
-    if not user_id:
+    user = get_auth_user()
+    if not user:
         return jsonify({'error': 'Not authenticated'}), 401
     data = request.json or {}
     config_id = data.get('config_id')
@@ -466,7 +470,7 @@ def user_config_mark_used():
     except Exception:
         return jsonify({'error': 'Bad config id'}), 400
     item = ConfigItem.query.get(config_id)
-    if not item or item.user_id != user_id:
+    if not item or item.user_id != user.id:
         return jsonify({'error': 'Not found'}), 404
     item.is_used = True
     db.session.commit()
@@ -474,13 +478,9 @@ def user_config_mark_used():
 
 @app.route('/user', methods=['GET'])
 def get_user():
-    user_id = session.get('user_id')
-    if not user_id:
-        return jsonify({'error': 'Not authenticated'}), 401
-    
-    user = User.query.get(user_id)
+    user = get_auth_user()
     if not user:
-        return jsonify({'error': 'User not found'}), 404
+        return jsonify({'error': 'Not authenticated'}), 401
     
     data = user.to_dict()
     tariffs = {t['id']: t for t in load_tariffs()}
@@ -493,9 +493,7 @@ def get_user():
 
 @app.route('/admin', methods=['GET'])
 def admin_panel():
-    user_id = session.get('user_id')
-    user = User.query.get(user_id)
-    
+    user = get_auth_user()
     if not user or not user.is_admin:
         return jsonify({'error': 'Unauthorized'}), 403
     

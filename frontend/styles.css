@@ -386,6 +386,7 @@ button:active,
     overflow: hidden;
     padding: 0;
     align-self: center;
+    position: relative;
 }
 
 .sheet-qr canvas,

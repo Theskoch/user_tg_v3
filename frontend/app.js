@@ -75,9 +75,18 @@ const warnClose = document.getElementById('warn-close');
 
 // API URL
 const API_URL = window.location.origin;
+const TELEGRAM_ID = window.Telegram?.WebApp?.initDataUnsafe?.user?.id || null;
+
+function getAuthHeaders() {
+  return TELEGRAM_ID ? { 'X-Telegram-Id': String(TELEGRAM_ID) } : {};
+}
 
 async function apiGet(path) {
-  const r = await fetch(path, { credentials: 'include', cache: 'no-store' });
+  const r = await fetch(path, {
+    credentials: 'include',
+    cache: 'no-store',
+    headers: getAuthHeaders()
+  });
   if (!r.ok) throw new Error(await r.text());
   return r.json();
 }
@@ -85,7 +94,7 @@ async function apiGet(path) {
 async function apiPost(path, payload = {}) {
   const r = await fetch(path, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
     credentials: 'include',
     body: JSON.stringify(payload)
   });
@@ -415,12 +424,21 @@ function openSheet(conn) {
       }
       const qrEl = sheetQr.querySelector('canvas, img, table');
       if (qrEl) {
-        qrEl.style.width = `${size}px`;
-        qrEl.style.height = `${size}px`;
-        qrEl.style.maxWidth = '100%';
-        qrEl.style.maxHeight = '100%';
-        qrEl.style.display = 'block';
-        qrEl.style.margin = '0 auto';
+        const boxSize = size;
+        const rect = qrEl.getBoundingClientRect();
+        const naturalW = rect.width || qrEl.offsetWidth || boxSize;
+        const naturalH = rect.height || qrEl.offsetHeight || boxSize;
+        const scale = Math.min(boxSize / naturalW, boxSize / naturalH, 1);
+
+        qrEl.style.position = 'absolute';
+        qrEl.style.left = '50%';
+        qrEl.style.top = '50%';
+        qrEl.style.transform = `translate(-50%, -50%) scale(${scale})`;
+        qrEl.style.transformOrigin = 'center center';
+        qrEl.style.width = `${naturalW}px`;
+        qrEl.style.height = `${naturalH}px`;
+        qrEl.style.maxWidth = 'none';
+        qrEl.style.maxHeight = 'none';
       }
     } else {
       sheetQr.textContent = 'QR';
