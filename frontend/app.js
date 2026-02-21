@@ -414,49 +414,54 @@ function openSheet(conn) {
   sheetText.textContent = conn.text;
   if (sheetQr) {
     sheetQr.innerHTML = '';
-    if (window.QRCode) {
-      const rawText = String(conn.text || '');
-      const trimmed = rawText.includes('#') ? rawText.split('#')[0] : rawText;
-      const size = 180;
-      try {
-        new QRCode(sheetQr, { text: rawText, width: size, height: size });
-      } catch (e) {
+    try {
+      if (window.QRCode) {
+        const rawText = String(conn.text || '');
+        const trimmed = rawText.includes('#') ? rawText.split('#')[0] : rawText;
+        const size = 180;
         try {
-          new QRCode(sheetQr, { text: trimmed, width: size, height: size });
-        } catch {
-          sheetQr.textContent = 'QR слишком длинный';
+          new QRCode(sheetQr, { text: rawText, width: size, height: size });
+        } catch (e) {
+          try {
+            new QRCode(sheetQr, { text: trimmed, width: size, height: size });
+          } catch {
+            sheetQr.textContent = 'QR слишком длинный';
+          }
         }
-      }
-      const qrEl = sheetQr.querySelector('canvas, img, table');
-      if (qrEl) {
-        const rebuilt = rebuildQrToCanvas(qrEl, size);
-        if (rebuilt) {
-          sheetQr.innerHTML = '';
-          rebuilt.style.width = `${size}px`;
-          rebuilt.style.height = `${size}px`;
-          rebuilt.style.display = 'block';
-          rebuilt.style.margin = '0 auto';
-          sheetQr.appendChild(rebuilt);
-        } else {
-          const boxSize = size;
-          const rect = qrEl.getBoundingClientRect();
-          const naturalW = rect.width || qrEl.offsetWidth || boxSize;
-          const naturalH = rect.height || qrEl.offsetHeight || boxSize;
-          const scale = Math.min(boxSize / naturalW, boxSize / naturalH, 1);
+        const qrEl = sheetQr.querySelector('canvas, img, table');
+        if (qrEl) {
+          const rebuilt = rebuildQrToCanvas(qrEl, size);
+          if (rebuilt) {
+            sheetQr.innerHTML = '';
+            rebuilt.style.width = `${size}px`;
+            rebuilt.style.height = `${size}px`;
+            rebuilt.style.display = 'block';
+            rebuilt.style.margin = '0 auto';
+            sheetQr.appendChild(rebuilt);
+          } else {
+            const boxSize = size;
+            const rect = qrEl.getBoundingClientRect();
+            const naturalW = rect.width || qrEl.offsetWidth || boxSize;
+            const naturalH = rect.height || qrEl.offsetHeight || boxSize;
+            const scale = Math.min(boxSize / naturalW, boxSize / naturalH, 1);
 
-          qrEl.style.position = 'absolute';
-          qrEl.style.left = '50%';
-          qrEl.style.top = '50%';
-          qrEl.style.transform = `translate(-50%, -50%) scale(${scale})`;
-          qrEl.style.transformOrigin = 'center center';
-          qrEl.style.width = `${naturalW}px`;
-          qrEl.style.height = `${naturalH}px`;
-          qrEl.style.maxWidth = 'none';
-          qrEl.style.maxHeight = 'none';
+            qrEl.style.position = 'absolute';
+            qrEl.style.left = '50%';
+            qrEl.style.top = '50%';
+            qrEl.style.transform = `translate(-50%, -50%) scale(${scale})`;
+            qrEl.style.transformOrigin = 'center center';
+            qrEl.style.width = `${naturalW}px`;
+            qrEl.style.height = `${naturalH}px`;
+            qrEl.style.maxWidth = 'none';
+            qrEl.style.maxHeight = 'none';
+          }
         }
+      } else {
+        sheetQr.textContent = 'QR';
       }
-    } else {
-      sheetQr.textContent = 'QR';
+    } catch (e) {
+      console.warn('QR render error', e);
+      sheetQr.textContent = 'QR недоступен';
     }
   }
   sheetOverlay.classList.remove('hidden');
