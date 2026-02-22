@@ -53,6 +53,8 @@ const adminTariffSave = document.getElementById('admin-tariff-save');
 const adminBalanceInput = document.getElementById('admin-balance');
 const adminBalanceSave = document.getElementById('admin-balance-save');
 const adminBalanceCurrent = document.getElementById('admin-balance-current');
+const adminTariffUntil = document.getElementById('admin-tariff-until');
+const adminTariffUntilSave = document.getElementById('admin-tariff-until-save');
 const adminConfigsBox = document.getElementById('admin-configs');
 const adminConfigAdd = document.getElementById('admin-config-add');
 const adminUserDelete = document.getElementById('admin-user-delete');
@@ -614,6 +616,15 @@ async function openAdminUser(u) {
       adminBalanceCurrent.textContent = `Текущий: ${current} ₽`;
     }
   }
+  if (adminTariffUntil) {
+    if (u.tariff_paid_until) {
+      const d = new Date(u.tariff_paid_until);
+      const iso = d.toISOString().slice(0, 10);
+      adminTariffUntil.value = iso;
+    } else {
+      adminTariffUntil.value = '';
+    }
+  }
   await loadAdminConfigs();
 }
 
@@ -676,6 +687,15 @@ adminBalanceSave?.addEventListener('click', async () => {
   if (adminBalanceCurrent) {
     adminBalanceCurrent.textContent = `Текущий: ${current} ₽`;
   }
+  await loadAdminUsers();
+});
+
+adminTariffUntilSave?.addEventListener('click', async () => {
+  if (!ADMIN_SELECTED) return;
+  await apiPost(`${API_URL}/api/admin/user/set_tariff_until`, {
+    target_user_id: ADMIN_SELECTED.id,
+    tariff_paid_until: adminTariffUntil?.value || null
+  });
   await loadAdminUsers();
 });
 

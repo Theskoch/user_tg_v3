@@ -388,6 +388,31 @@ def admin_set_balance():
     db.session.commit()
     return jsonify({'ok': True})
 
+@app.route('/api/admin/user/set_tariff_until', methods=['POST'])
+def admin_set_tariff_until():
+    if not admin_required():
+        return jsonify({'error': 'Unauthorized'}), 403
+    data = request.json or {}
+    target_id = data.get('target_user_id')
+    tariff_paid_until = data.get('tariff_paid_until')
+    try:
+        target_id = int(target_id)
+    except Exception:
+        return jsonify({'error': 'Bad user id'}), 400
+    user = User.query.get(target_id)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    if tariff_paid_until:
+        try:
+            user.tariff_paid_until = datetime.fromisoformat(tariff_paid_until)
+        except Exception:
+            return jsonify({'error': 'Bad date'}), 400
+    else:
+        user.tariff_paid_until = None
+    user.tariff_next_charge_at = user.tariff_paid_until
+    db.session.commit()
+    return jsonify({'ok': True})
+
 @app.route('/api/admin/user/delete', methods=['POST'])
 def admin_delete_user():
     if not admin_required():
