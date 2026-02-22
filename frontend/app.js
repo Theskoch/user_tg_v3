@@ -45,6 +45,8 @@ const adminUsersBox = document.getElementById('admin-users');
 const inviteAdminBtn = document.getElementById('invite-admin');
 const inviteUserBtn = document.getElementById('invite-user');
 const inviteCodeBox = document.getElementById('invite-code');
+const inviteCopyBtn = document.getElementById('invite-copy');
+const inviteCopyToast = document.getElementById('invite-copy-toast');
 const adminUserPage = document.getElementById('admin-user-page');
 const adminUserBack = document.getElementById('admin-user-back');
 const adminUserTitle = document.getElementById('admin-user-title');
@@ -665,6 +667,30 @@ inviteUserBtn?.addEventListener('click', async () => {
   try {
     const r = await apiPost(`${API_URL}/generate_code`, { role: 'user' });
     inviteCodeBox.textContent = r.code;
+  } catch {}
+});
+
+inviteCopyBtn?.addEventListener('click', async () => {
+  try {
+    const code = inviteCodeBox?.textContent?.trim();
+    if (!code || code === '—') return;
+    try {
+      await navigator.clipboard.writeText(code);
+    } catch {
+      const ta = document.createElement('textarea');
+      ta.value = code;
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+    inviteCopyBtn.classList.add('copy-pressed');
+    setTimeout(() => inviteCopyBtn.classList.remove('copy-pressed'), 180);
+    inviteCopyToast?.classList.add('show');
+    setTimeout(() => inviteCopyToast?.classList.remove('show'), 1800);
   } catch {}
 });
 

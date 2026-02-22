@@ -99,6 +99,13 @@ body::-webkit-scrollbar {
     border: 1px solid rgba(255,255,255,0.15);
 }
 
+.btn.btn-danger {
+    background: rgba(255,93,93,0.12);
+    border: 1px solid rgba(255,93,93,0.35);
+    color: #ffb3b3;
+    box-shadow: none;
+}
+
 .icon-btn {
     width: 40px;
     height: 40px;
