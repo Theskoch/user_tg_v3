@@ -63,10 +63,7 @@ def load_tariffs():
 
 def get_auth_user():
     telegram_id = request.headers.get('X-Telegram-Id')
-    try:
-        telegram_id = int(telegram_id) if telegram_id else None
-    except Exception:
-        telegram_id = None
+    telegram_id = str(telegram_id).strip() if telegram_id else None
     if not telegram_id:
         return None
     return User.query.filter_by(telegram_id=telegram_id).first()
@@ -240,7 +237,8 @@ def authenticate():
         return jsonify({'success': False, 'message': 'Нет данных Telegram'}), 400
 
     # If user already exists, auto-login without code
-    existing_user = User.query.filter_by(telegram_id=telegram_data['id']).first()
+    tg_id = str(telegram_data['id'])
+    existing_user = User.query.filter_by(telegram_id=tg_id).first()
     if existing_user:
         return jsonify({
             'success': True,
@@ -260,7 +258,7 @@ def authenticate():
     
     # Create user
     new_user = User(
-        telegram_id=telegram_data['id'],
+        telegram_id=tg_id,
         username=telegram_data.get('username'),
         first_name=telegram_data.get('first_name'),
         last_name=telegram_data.get('last_name'),
