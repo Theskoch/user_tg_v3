@@ -830,15 +830,16 @@ adminUserDelete?.addEventListener('click', async () => {
 // Auto-login on load if user already exists
 async function tryAutoLogin() {
   try {
-    if (!tg || !tg.initDataUnsafe || !tg.initDataUnsafe.user) {
+    const rawUser = tg?.initDataUnsafe?.user || getStoredTelegramUser();
+    if (!rawUser?.id) {
       return;
     }
 
     const telegramUser = {
-      id: tg.initDataUnsafe.user.id,
-      username: tg.initDataUnsafe.user.username,
-      first_name: tg.initDataUnsafe.user.first_name,
-      last_name: tg.initDataUnsafe.user.last_name
+      id: rawUser.id,
+      username: rawUser.username,
+      first_name: rawUser.first_name,
+      last_name: rawUser.last_name
     };
     saveTelegramUser(telegramUser);
 

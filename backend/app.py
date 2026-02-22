@@ -251,15 +251,12 @@ def authenticate():
     
     # Validate one-time code
     one_time_code = OneTimeCode.query.filter_by(code=code).first()
-    
-    if not one_time_code:
-        return jsonify({'success': False, 'message': 'Неверный код'})
-    
-    # Check if code is already used
-    if one_time_code.used_at:
-        return jsonify({'success': False, 'message': 'Код уже использован'})
-    
-    # Code does not expire until used
+    if not one_time_code or one_time_code.used_at:
+        return jsonify({'success': False, 'message': 'Код недействителен'})
+
+    # Check code expiration (1 hour)
+    if one_time_code.created_at < datetime.utcnow() - timedelta(hours=1):
+        return jsonify({'success': False, 'message': 'Код недействителен'})
     
     # Create user
     new_user = User(
