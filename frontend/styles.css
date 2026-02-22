@@ -471,6 +471,8 @@ select.sheet-text, input.sheet-text {
     border: 1px solid rgba(255,255,255,0.1);
     padding: 10px 12px;
     min-height: 42px;
+    width: 100%;
+    max-width: 100%;
 }
 
 select.sheet-text {

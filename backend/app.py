@@ -259,9 +259,7 @@ def authenticate():
     if one_time_code.used_at:
         return jsonify({'success': False, 'message': 'Код уже использован'})
     
-    # Check code expiration (1 hour)
-    if one_time_code.created_at < datetime.utcnow() - timedelta(hours=1):
-        return jsonify({'success': False, 'message': 'Код просрочен'})
+    # Code does not expire until used
     
     # Create user
     new_user = User(
