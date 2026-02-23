@@ -15,6 +15,22 @@ import qrcode
 from PIL import Image
 from werkzeug.middleware.proxy_fix import ProxyFix
 from sqlalchemy import text
+import logging
+
+# Auth debug logging
+LOG_PATH = os.path.join(os.path.dirname(__file__), 'auth_debug.log')
+logging.basicConfig(
+    filename=LOG_PATH,
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)s %(message)s'
+)
+
+def log_auth(event, **fields):
+    try:
+        safe_fields = {k: v for k, v in fields.items()}
+        logging.info("%s | %s", event, safe_fields)
+    except Exception:
+        pass
 
 # Determine project root
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -64,6 +80,7 @@ def load_tariffs():
 def get_auth_user():
     telegram_id = request.headers.get('X-Telegram-Id')
     telegram_id = str(telegram_id).strip() if telegram_id else None
+    log_auth('get_auth_user', header=telegram_id, path=str(request.path))
     if not telegram_id:
         return None
     return User.query.filter_by(telegram_id=telegram_id).first()
@@ -234,12 +251,14 @@ def authenticate():
     print("telegram_data:", telegram_data)
 
     if not telegram_data or not telegram_data.get('id'):
+        log_auth('auth_no_tg', code=code, telegram_data=telegram_data)
         return jsonify({'success': False, 'message': 'Нет данных Telegram'}), 400
 
     # If user already exists, auto-login without code
     tg_id = str(telegram_data['id'])
     existing_user = User.query.filter_by(telegram_id=tg_id).first()
     if existing_user:
+        log_auth('auth_existing_user', tg_id=tg_id)
         return jsonify({
             'success': True,
             'is_admin': existing_user.is_admin,
@@ -250,10 +269,12 @@ def authenticate():
     # Validate one-time code
     one_time_code = OneTimeCode.query.filter_by(code=code).first()
     if not one_time_code or one_time_code.used_at:
+        log_auth('auth_invalid_code', tg_id=tg_id, code=code, reason='not_found_or_used')
         return jsonify({'success': False, 'message': 'Код недействителен'})
 
     # Check code expiration (1 hour)
     if one_time_code.created_at < datetime.utcnow() - timedelta(hours=1):
+        log_auth('auth_invalid_code', tg_id=tg_id, code=code, reason='expired')
         return jsonify({'success': False, 'message': 'Код недействителен'})
     
     # Create user
@@ -267,6 +288,8 @@ def authenticate():
     db.session.add(new_user)
     db.session.commit()
     user_id = new_user.id
+
+    log_auth('auth_created_user', tg_id=tg_id, user_id=user_id, is_admin=one_time_code.is_admin)
     
     # Mark code as used
     one_time_code.used_at = datetime.utcnow()
