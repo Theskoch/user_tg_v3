@@ -241,14 +241,11 @@ def ensure_schema():
 
 @app.route('/auth', methods=['POST'])
 def authenticate():
-    data = request.json
+    data = request.get_json(silent=True) or {}
     code = data.get('code')
     telegram_data = data.get('telegram_user')
 
-    # Debug logs
-    print("/auth called")
-    print("code:", code)
-    print("telegram_data:", telegram_data)
+    log_auth('auth_called', code=code, has_tg=bool(telegram_data))
 
     if not telegram_data or not telegram_data.get('id'):
         log_auth('auth_no_tg', code=code, telegram_data=telegram_data)
