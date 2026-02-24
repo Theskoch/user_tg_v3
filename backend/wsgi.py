@@ -11,8 +11,11 @@ if __name__ == "__main__":
     import socket
     local_ip = socket.gethostbyname(socket.gethostname())
     
-    print(f"Server accessible at:")
-    print(f"http://localhost:5000")
-    print(f"http://{local_ip}:5000")
+    # Avoid stdout prints in production environments
+    try:
+        from app import log_auth
+        log_auth('server_start', host='0.0.0.0', port=5000, local_ip=local_ip)
+    except Exception:
+        pass
     
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=False)

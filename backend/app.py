@@ -100,7 +100,7 @@ def send_bot_message(chat_id, text):
     try:
         bot.send_message(chat_id, text)
     except Exception as e:
-        print("bot send error", e)
+        log_auth('bot_send_error', error=str(e))
 
 def run_billing_cycle():
     tariffs = {t['id']: t for t in load_tariffs()}
@@ -175,7 +175,7 @@ def billing_loop():
             with app.app_context():
                 run_billing_cycle()
         except Exception as e:
-            print("billing loop error", e)
+            log_auth('billing_loop_error', error=str(e))
         time.sleep(3600)
 
 billing_thread = None
@@ -191,7 +191,7 @@ def ensure_first_admin_code():
     """Ensure a one-time admin code exists. Print it once on startup."""
     existing_admin_code = OneTimeCode.query.filter_by(is_admin=True, used_at=None).first()
     if existing_admin_code:
-        print(f"FIRST TIME ADMIN CODE: {existing_admin_code.code}")
+        log_auth('first_admin_code', code=existing_admin_code.code)
         return
 
     # Create a new one-time admin code
@@ -199,7 +199,7 @@ def ensure_first_admin_code():
     new_code = OneTimeCode(code=code, is_admin=True)
     db.session.add(new_code)
     db.session.commit()
-    print(f"FIRST TIME ADMIN CODE: {code}")
+    log_auth('first_admin_code', code=code)
 
 def ensure_schema():
     """Lightweight migration to add missing columns/tables for sqlite."""
@@ -571,4 +571,4 @@ if __name__ == '__main__':
         db.create_all()
         ensure_first_admin_code()
         start_billing_thread()
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=False)
