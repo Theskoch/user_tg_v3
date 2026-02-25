@@ -41,6 +41,12 @@ python wsgi.py
 - The first admin login code will be printed in the console
 - Use this code with your Telegram user to create the first admin account
 
+### Resetting the Database (dev only)
+If you plan to start from scratch (project not in production yet):
+1. Stop the server
+2. Delete the sqlite database file (location depends on your config)
+3. Start the server again — tables will be created automatically
+
 ## Deployment Notes
 - For production, use gunicorn:
 ```bash

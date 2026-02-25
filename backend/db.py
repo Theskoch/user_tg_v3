@@ -28,6 +28,13 @@ class User(db.Model):
     tariff_next_charge_at = Column(DateTime, nullable=True)
     last_low_balance_warn_at = Column(DateTime, nullable=True)
     last_overdue_admin_at = Column(DateTime, nullable=True)
+    user_warn_14_at = Column(DateTime, nullable=True)
+    user_warn_7_at = Column(DateTime, nullable=True)
+    user_warn_0_at = Column(DateTime, nullable=True)
+    user_overdue_daily_at = Column(DateTime, nullable=True)
+    admin_warn_0_at = Column(DateTime, nullable=True)
+    admin_warn_7_at = Column(DateTime, nullable=True)
+    admin_warn_14_at = Column(DateTime, nullable=True)
     
     def to_dict(self):
         return {
@@ -66,4 +73,33 @@ class ConfigItem(db.Model):
             'config_text': safe_text,
             'created_at': self.created_at.isoformat() if self.created_at else None
             , 'is_used': self.is_used
+        }
+
+class TopUpTicket(db.Model):
+    __tablename__ = 'topup_tickets'
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, nullable=False)
+    amount = Column(Float, nullable=False)
+    status = Column(String, default='pending')  # pending | approved | rejected
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow)
+    approved_by = Column(Integer, nullable=True)
+    approved_at = Column(DateTime, nullable=True)
+    rejected_by = Column(Integer, nullable=True)
+    rejected_at = Column(DateTime, nullable=True)
+    last_admin_notify_at = Column(DateTime, nullable=True)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'amount': self.amount,
+            'status': self.status,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'approved_by': self.approved_by,
+            'approved_at': self.approved_at.isoformat() if self.approved_at else None,
+            'rejected_by': self.rejected_by,
+            'rejected_at': self.rejected_at.isoformat() if self.rejected_at else None
         }

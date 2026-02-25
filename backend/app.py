@@ -3,12 +3,13 @@ import secrets
 import calendar
 import threading
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time as dt_time
 from flask import Flask, request, jsonify, session, send_from_directory
 from flask_cors import CORS
 from config import Config
-from db import db, User, OneTimeCode, ConfigItem
+from db import db, User, OneTimeCode, ConfigItem, TopUpTicket
 import telebot
+from telebot import types
 import io
 import base64
 import qrcode
@@ -102,10 +103,114 @@ def send_bot_message(chat_id, text):
     except Exception as e:
         log_auth('bot_send_error', error=str(e))
 
+def send_bot_message_with_markup(chat_id, text, markup=None):
+    if not BOT_TOKEN:
+        return
+    try:
+        bot.send_message(chat_id, text, reply_markup=markup)
+    except Exception as e:
+        log_auth('bot_send_error', error=str(e))
+
+def build_topup_admin_markup(ticket_id):
+    markup = types.InlineKeyboardMarkup(row_width=2)
+    markup.add(
+        types.InlineKeyboardButton("✅ Подтвердить", callback_data=f"topup:approve:{ticket_id}"),
+        types.InlineKeyboardButton("❌ Не подтверждаю", callback_data=f"topup:reject:{ticket_id}")
+    )
+    return markup
+
+def notify_admins_topup(ticket, user):
+    admins = User.query.filter_by(is_admin=True).all()
+    text = (
+        f"Пользователь {user.first_name or ''} @{user.username or ''} отправил перевод на сумму "
+        f"{ticket.amount:.2f} ₽. Подтверждаете?"
+    )
+    markup = build_topup_admin_markup(ticket.id)
+    for admin in admins:
+        send_bot_message_with_markup(admin.telegram_id, text, markup=markup)
+    ticket.last_admin_notify_at = datetime.utcnow()
+
+@bot.callback_query_handler(func=lambda call: call.data and call.data.startswith('topup:'))
+def handle_topup_callback(call):
+    try:
+        parts = call.data.split(':')
+        if len(parts) != 3:
+            return
+        action = parts[1]
+        ticket_id = int(parts[2])
+        with app.app_context():
+            admin = User.query.filter_by(telegram_id=str(call.from_user.id)).first()
+            if not admin or not admin.is_admin:
+                bot.answer_callback_query(call.id, "Недостаточно прав")
+                return
+
+            ticket = TopUpTicket.query.get(ticket_id)
+            if not ticket or ticket.status != 'pending':
+                bot.answer_callback_query(call.id, "Платёж уже обработан")
+                return
+
+            user = User.query.get(ticket.user_id)
+            now = datetime.utcnow()
+
+            if action == 'approve':
+                ticket.status = 'approved'
+                ticket.updated_at = now
+                ticket.approved_at = now
+                ticket.approved_by = admin.id
+                if user:
+                    user.balance = float(user.balance or 0) + float(ticket.amount)
+                db.session.commit()
+
+                if user:
+                    send_bot_message(user.telegram_id, f"Платёж подтверждён. Баланс пополнен на {ticket.amount:.2f} ₽.")
+
+                admins = User.query.filter_by(is_admin=True).all()
+                for a in admins:
+                    send_bot_message(a.telegram_id, (
+                        f"Платёж пользователя {user.first_name or ''} @{user.username or ''} "
+                        f"на сумму {ticket.amount:.2f} ₽ подтверждён админом {admin.first_name or ''} @{admin.username or ''}."
+                    ))
+                bot.answer_callback_query(call.id, "Подтверждено")
+
+            elif action == 'reject':
+                ticket.status = 'rejected'
+                ticket.updated_at = now
+                ticket.rejected_at = now
+                ticket.rejected_by = admin.id
+                db.session.commit()
+
+                if user:
+                    send_bot_message(user.telegram_id, "Платёж отклонён администратором.")
+
+                admins = User.query.filter_by(is_admin=True).all()
+                for a in admins:
+                    send_bot_message(a.telegram_id, (
+                        f"Платёж пользователя {user.first_name or ''} @{user.username or ''} "
+                        f"на сумму {ticket.amount:.2f} ₽ отклонён админом {admin.first_name or ''} @{admin.username or ''}."
+                    ))
+                bot.answer_callback_query(call.id, "Отклонено")
+    except Exception as e:
+        log_auth('topup_callback_error', error=str(e))
+
 def run_billing_cycle():
     tariffs = {t['id']: t for t in load_tariffs()}
     now = datetime.utcnow()
+    now_msk = now + timedelta(hours=3)
+    today_msk = now_msk.date()
+    is_noon_msk = now_msk.time().hour == 12
     admins = User.query.filter_by(is_admin=True).all()
+
+    def fmt_dt(dt_val):
+        return dt_val.strftime('%d.%m.%Y') if dt_val else '—'
+
+    def days_left(target_dt):
+        if not target_dt:
+            return None
+        return (target_dt.date() - today_msk).days
+
+    def send_admins(text):
+        for admin in admins:
+            send_bot_message(admin.telegram_id, text)
 
     for user in User.query.filter(User.tariff_id.isnot(None)).all():
         tariff = tariffs.get(user.tariff_id)
@@ -120,34 +225,108 @@ def run_billing_cycle():
         if not user.tariff_paid_until:
             user.tariff_paid_until = user.tariff_next_charge_at
 
-        # warn user 14 days before charge if not enough balance
-        warn_at = user.tariff_next_charge_at - timedelta(days=14)
-        if now >= warn_at and user.balance < price:
-            if not user.last_low_balance_warn_at or user.last_low_balance_warn_at < warn_at:
-                send_bot_message(user.telegram_id, (
-                    f"Напоминание: до оплаты тарифа осталось 14 дней. "
-                    f"Для продления тарифа «{tariff.get('name')}» нужно {price:.2f} ₽."
-                ))
-                user.last_low_balance_warn_at = now
+        # user reminders: 14 / 7 / 0 days before charge
+        if user.balance < price:
+            left_days = days_left(user.tariff_next_charge_at)
+            if left_days is not None:
+                if left_days == 14 and (not user.user_warn_14_at or user.user_warn_14_at.date() != today_msk):
+                    send_bot_message(user.telegram_id, (
+                        f"Напоминание: до оплаты тарифа осталось {left_days} дней. "
+                        f"Дата оплаты: {fmt_dt(user.tariff_next_charge_at)}. "
+                        f"Для продления тарифа «{tariff.get('name')}» нужно {price:.2f} ₽."
+                    ))
+                    user.user_warn_14_at = now
+                if left_days == 7 and (not user.user_warn_7_at or user.user_warn_7_at.date() != today_msk):
+                    send_bot_message(user.telegram_id, (
+                        f"Напоминание: до оплаты тарифа осталось {left_days} дней. "
+                        f"Дата оплаты: {fmt_dt(user.tariff_next_charge_at)}. "
+                        f"Для продления тарифа «{tariff.get('name')}» нужно {price:.2f} ₽."
+                    ))
+                    user.user_warn_7_at = now
+                if left_days == 0 and (not user.user_warn_0_at or user.user_warn_0_at.date() != today_msk):
+                    send_bot_message(user.telegram_id, (
+                        f"Сегодня последний день оплаты тарифа. "
+                        f"Дата оплаты: {fmt_dt(user.tariff_next_charge_at)}. "
+                        f"Для продления тарифа «{tariff.get('name')}» нужно {price:.2f} ₽."
+                    ))
+                    user.user_warn_0_at = now
+
+        # admin notice on due date
+        if user.balance < price and user.tariff_next_charge_at:
+            left_days = days_left(user.tariff_next_charge_at)
+            if left_days == 0 and (not user.admin_warn_0_at or user.admin_warn_0_at.date() != today_msk):
+                send_admins(
+                    f"Тариф пользователя {user.first_name or ''} @{user.username or ''} закончился сегодня. "
+                    f"Дата оплаты: {fmt_dt(user.tariff_next_charge_at)}."
+                )
+                user.admin_warn_0_at = now
 
         # charge if due
-        if now >= user.tariff_next_charge_at:
+        if user.tariff_next_charge_at and now >= user.tariff_next_charge_at:
             if user.balance >= price:
                 user.balance -= price
                 user.tariff_paid_until = add_months(user.tariff_next_charge_at, months)
                 user.tariff_next_charge_at = user.tariff_paid_until
                 user.last_overdue_admin_at = None
             else:
-                overdue_at = user.tariff_next_charge_at + timedelta(days=14)
-                if now >= overdue_at:
-                    if not user.last_overdue_admin_at or user.last_overdue_admin_at < overdue_at:
-                        for admin in admins:
-                            send_bot_message(admin.telegram_id, (
-                                f"Пользователь {user.first_name or ''} @{user.username or ''} "
-                                f"не оплатил тариф «{tariff.get('name')}». "
-                                "Нужно удалить или попросить оплатить."
-                            ))
-                        user.last_overdue_admin_at = now
+                overdue_days = (today_msk - user.tariff_next_charge_at.date()).days
+
+                # user daily reminders after overdue (up to 14 days), at 12:00 MSK
+                if overdue_days >= 1 and overdue_days <= 14 and is_noon_msk:
+                    if not user.user_overdue_daily_at or user.user_overdue_daily_at.date() != today_msk:
+                        block_date = user.tariff_next_charge_at.date() + timedelta(days=14)
+                        send_bot_message(user.telegram_id, (
+                            f"Тариф просрочен на {overdue_days} дней. "
+                            f"Оплатите до {block_date.strftime('%d.%m.%Y')}, иначе доступ будет заблокирован вручную."
+                        ))
+                        user.user_overdue_daily_at = now
+
+                # admin notices at +7 and +14 days
+                if overdue_days == 7 and (not user.admin_warn_7_at or user.admin_warn_7_at.date() != today_msk):
+                    send_admins(
+                        f"Пользователь {user.first_name or ''} @{user.username or ''} не оплатил тариф уже 7 дней. "
+                        f"Дата оплаты: {fmt_dt(user.tariff_next_charge_at)}."
+                    )
+                    user.admin_warn_7_at = now
+
+                if overdue_days == 14 and (not user.admin_warn_14_at or user.admin_warn_14_at.date() != today_msk):
+                    send_admins(
+                        f"Пользователь {user.first_name or ''} @{user.username or ''} не оплатил тариф 14 дней. "
+                        "Нужно заблокировать вручную."
+                    )
+                    user.admin_warn_14_at = now
+
+    db.session.commit()
+
+    # topup ticket reminders/auto-reject
+    now = datetime.utcnow()
+    pending_tickets = TopUpTicket.query.filter_by(status='pending').all()
+    for t in pending_tickets:
+        user = User.query.get(t.user_id)
+        if not user:
+            continue
+        created_at = t.created_at or now
+        age_hours = (now - created_at).total_seconds() / 3600
+
+        if age_hours >= 48:
+            # auto reject
+            t.status = 'rejected'
+            t.updated_at = now
+            t.rejected_at = now
+            t.rejected_by = None
+            send_bot_message(user.telegram_id, "Платёж отклонён (нет подтверждения более 48 часов).")
+            admins = User.query.filter_by(is_admin=True).all()
+            for admin in admins:
+                send_bot_message(admin.telegram_id, (
+                    f"Платёж пользователя {user.first_name or ''} @{user.username or ''} "
+                    f"на сумму {t.amount:.2f} ₽ отклонён автоматически (48ч)."
+                ))
+            continue
+
+        if age_hours >= 24:
+            # resend admin notify once per 24h
+            if not t.last_admin_notify_at or (now - t.last_admin_notify_at).total_seconds() >= 24 * 3600:
+                notify_admins_topup(t, user)
 
     db.session.commit()
 
@@ -191,7 +370,10 @@ def ensure_first_admin_code():
     """Ensure a one-time admin code exists. Print it once on startup."""
     existing_admin_code = OneTimeCode.query.filter_by(is_admin=True, used_at=None).first()
     if existing_admin_code:
-        log_auth('first_admin_code', code=existing_admin_code.code)
+        try:
+            print(f"FIRST TIME ADMIN CODE: {existing_admin_code.code}")
+        except Exception:
+            log_auth('first_admin_code', code=existing_admin_code.code)
         return
 
     # Create a new one-time admin code
@@ -199,45 +381,11 @@ def ensure_first_admin_code():
     new_code = OneTimeCode(code=code, is_admin=True)
     db.session.add(new_code)
     db.session.commit()
-    log_auth('first_admin_code', code=code)
-
-def ensure_schema():
-    """Lightweight migration to add missing columns/tables for sqlite."""
-    # ensure users.tariff_id exists
     try:
-        res = db.session.execute(text("PRAGMA table_info(users)"))
-        cols = {row[1] for row in res}
-        if 'tariff_id' not in cols:
-            db.session.execute(text("ALTER TABLE users ADD COLUMN tariff_id INTEGER"))
-            db.session.commit()
+        print(f"FIRST TIME ADMIN CODE: {code}")
     except Exception:
-        db.session.rollback()
+        log_auth('first_admin_code', code=code)
 
-    # ensure configs.is_used exists
-    try:
-        res = db.session.execute(text("PRAGMA table_info(configs)"))
-        cols = {row[1] for row in res}
-        if 'is_used' not in cols:
-            db.session.execute(text("ALTER TABLE configs ADD COLUMN is_used BOOLEAN DEFAULT 0"))
-            db.session.commit()
-    except Exception:
-        db.session.rollback()
-
-    # ensure users tariff billing columns exist
-    try:
-        res = db.session.execute(text("PRAGMA table_info(users)"))
-        cols = {row[1] for row in res}
-        if 'tariff_paid_until' not in cols:
-            db.session.execute(text("ALTER TABLE users ADD COLUMN tariff_paid_until DATETIME"))
-        if 'tariff_next_charge_at' not in cols:
-            db.session.execute(text("ALTER TABLE users ADD COLUMN tariff_next_charge_at DATETIME"))
-        if 'last_low_balance_warn_at' not in cols:
-            db.session.execute(text("ALTER TABLE users ADD COLUMN last_low_balance_warn_at DATETIME"))
-        if 'last_overdue_admin_at' not in cols:
-            db.session.execute(text("ALTER TABLE users ADD COLUMN last_overdue_admin_at DATETIME"))
-        db.session.commit()
-    except Exception:
-        db.session.rollback()
 
 @app.route('/auth', methods=['POST'])
 def authenticate():
@@ -517,6 +665,87 @@ def user_config_mark_used():
     item.is_used = True
     db.session.commit()
     return jsonify({'ok': True})
+
+@app.route('/api/configs/update_name', methods=['POST'])
+def user_config_update_name():
+    user = get_auth_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    data = request.json or {}
+    config_id = data.get('config_id')
+    name = (data.get('name') or '').strip() or 'Config'
+    try:
+        config_id = int(config_id)
+    except Exception:
+        return jsonify({'error': 'Bad config id'}), 400
+    item = ConfigItem.query.get(config_id)
+    if not item or item.user_id != user.id:
+        return jsonify({'error': 'Not found'}), 404
+    item.name = name
+    db.session.commit()
+    return jsonify({'ok': True, 'name': name})
+
+@app.route('/api/admin/configs/update_name', methods=['POST'])
+def admin_configs_update_name():
+    if not admin_required():
+        return jsonify({'error': 'Unauthorized'}), 403
+    data = request.json or {}
+    config_id = data.get('config_id')
+    name = (data.get('name') or '').strip() or 'Config'
+    try:
+        config_id = int(config_id)
+    except Exception:
+        return jsonify({'error': 'Bad config id'}), 400
+    item = ConfigItem.query.get(config_id)
+    if not item:
+        return jsonify({'error': 'Not found'}), 404
+    item.name = name
+    db.session.commit()
+    return jsonify({'ok': True, 'name': name})
+
+@app.route('/api/topup/create', methods=['POST'])
+def topup_create():
+    user = get_auth_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    data = request.json or {}
+    amount = data.get('amount')
+    try:
+        amount = float(amount)
+    except Exception:
+        return jsonify({'error': 'Bad amount'}), 400
+    if amount <= 0:
+        return jsonify({'error': 'Bad amount'}), 400
+
+    ticket = TopUpTicket(user_id=user.id, amount=amount, status='pending')
+    db.session.add(ticket)
+    db.session.commit()
+
+    notify_admins_topup(ticket, user)
+    db.session.commit()
+
+    return jsonify({'ok': True, 'ticket': ticket.to_dict()})
+
+@app.route('/api/topup/history', methods=['GET'])
+def topup_history():
+    user = get_auth_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    items = TopUpTicket.query.filter_by(user_id=user.id).order_by(TopUpTicket.created_at.desc()).all()
+    return jsonify([t.to_dict() for t in items])
+
+@app.route('/api/admin/topup/history', methods=['POST'])
+def admin_topup_history():
+    if not admin_required():
+        return jsonify({'error': 'Unauthorized'}), 403
+    data = request.json or {}
+    target_id = data.get('target_user_id')
+    try:
+        target_id = int(target_id)
+    except Exception:
+        return jsonify({'error': 'Bad user id'}), 400
+    items = TopUpTicket.query.filter_by(user_id=target_id).order_by(TopUpTicket.created_at.desc()).all()
+    return jsonify([t.to_dict() for t in items])
 
 @app.route('/user', methods=['GET'])
 def get_user():

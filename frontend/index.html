@@ -67,8 +67,13 @@
             <div class="pay-methods">
                 <button class="pay-card">Crypto</button>
                 <button class="pay-card">Stars</button>
-                <button class="pay-card">Перевод</button>
+                <button class="pay-card" id="pay-transfer">Перевод</button>
             </div>
+        </div>
+
+        <div class="card glass">
+            <h3>История пополнений</h3>
+            <div id="topup-history" class="connections-grid"></div>
         </div>
     </div>
 
@@ -100,6 +105,23 @@
             </button>
         </div>
         <button id="close-sheet" class="btn ghost">Закрыть</button>
+    </div>
+
+    <div id="topup-overlay" class="sheet-overlay hidden"></div>
+    <div id="topup-sheet" class="sheet hidden">
+        <div class="sheet-handle"></div>
+        <h4 id="topup-title">Пополнение переводом</h4>
+        <div id="topup-step-amount" class="row" style="display:grid; gap:10px;">
+            <div class="conn-sub">Введите сумму пополнения</div>
+            <input id="topup-amount" class="sheet-text" placeholder="1000" />
+            <button id="topup-submit" class="btn" style="background:#41c36f;">Пополнить</button>
+            <button id="topup-cancel" class="btn" style="background:#ff5d5d;">Отмена</button>
+        </div>
+        <div id="topup-step-info" class="row hidden" style="display:grid; gap:10px;">
+            <div class="conn-sub" id="topup-info-text"></div>
+            <button id="topup-copy" class="btn">Скопировать номер</button>
+            <button id="topup-sent" class="btn" style="background:#41c36f;">Отправил перевод</button>
+        </div>
     </div>
     <div id="copy-toast" class="copy-toast">
         <span>✔</span>
@@ -203,6 +225,11 @@
             <h3>Конфиги</h3>
             <button id="admin-config-add" class="btn">Добавить конфиг</button>
             <div id="admin-configs" class="connections-grid"></div>
+        </div>
+
+        <div class="card glass">
+            <h3>История пополнений</h3>
+            <div id="admin-topup-history" class="connections-grid"></div>
         </div>
 
         <button id="admin-user-delete" class="btn ghost">Удалить пользователя</button>

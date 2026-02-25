@@ -76,6 +76,111 @@ const warnOverlay = document.getElementById('warn-overlay');
 const warnSheet = document.getElementById('warn-sheet');
 const warnView = document.getElementById('warn-view');
 const warnClose = document.getElementById('warn-close');
+const payTransferBtn = document.getElementById('pay-transfer');
+const topupOverlay = document.getElementById('topup-overlay');
+const topupSheet = document.getElementById('topup-sheet');
+const topupAmountInput = document.getElementById('topup-amount');
+const topupSubmit = document.getElementById('topup-submit');
+const topupCancel = document.getElementById('topup-cancel');
+const topupStepAmount = document.getElementById('topup-step-amount');
+const topupStepInfo = document.getElementById('topup-step-info');
+const topupInfoText = document.getElementById('topup-info-text');
+const topupCopy = document.getElementById('topup-copy');
+const topupSent = document.getElementById('topup-sent');
+const topupHistory = document.getElementById('topup-history');
+const adminTopupHistory = document.getElementById('admin-topup-history');
+
+let TOPUP_DETAILS = { bank_name: 'Т-Банк', phone: '+79857959395' };
+
+async function loadTopupDetails() {
+  try {
+    const r = await fetch(`${API_URL}/topup_details.json`, { cache: 'no-store' });
+    const data = await r.json();
+    TOPUP_DETAILS = { ...TOPUP_DETAILS, ...data };
+  } catch {}
+}
+
+function openTopupSheet() {
+  if (!topupOverlay || !topupSheet) return;
+  topupAmountInput.value = '';
+  topupStepAmount?.classList.remove('hidden');
+  topupStepInfo?.classList.add('hidden');
+  topupOverlay.classList.remove('hidden');
+  topupSheet.classList.remove('hidden');
+  requestAnimationFrame(() => topupSheet.classList.add('show'));
+}
+
+function closeTopupSheet() {
+  topupSheet?.classList.remove('show');
+  topupOverlay?.classList.add('hidden');
+  setTimeout(() => topupSheet?.classList.add('hidden'), 250);
+}
+
+function showTopupInfo() {
+  if (topupStepAmount) topupStepAmount.classList.add('hidden');
+  if (topupStepInfo) topupStepInfo.classList.remove('hidden');
+  if (topupInfoText) {
+    topupInfoText.textContent = `Для пополнения совершите перевод на ${TOPUP_DETAILS.bank_name}, по номеру ${TOPUP_DETAILS.phone} и ожидайте зачисление. Зачисление средств происходит в течение 1–2 часов, максимум 24 часа.`;
+  }
+}
+
+function formatTopupStatus(status) {
+  if (status === 'approved') return { text: 'Подтвержден', cls: 'approved' };
+  if (status === 'rejected') return { text: 'Отклонён', cls: 'rejected' };
+  return { text: 'На подтверждении', cls: 'pending' };
+}
+
+async function loadTopupHistory() {
+  if (!topupHistory) return;
+  topupHistory.innerHTML = '';
+  try {
+    const items = await apiGet(`${API_URL}/api/topup/history`);
+    if (!items.length) {
+      topupHistory.innerHTML = '<div class="conn-sub">Пока нет пополнений</div>';
+      return;
+    }
+    items.forEach(t => {
+      const status = formatTopupStatus(t.status);
+      const card = document.createElement('div');
+      card.className = 'conn-card';
+      const date = t.created_at ? new Date(t.created_at).toLocaleString('ru-RU') : '—';
+      card.innerHTML = `
+        <div class="conn-title">${Number(t.amount || 0).toFixed(2)} ₽</div>
+        <div class="conn-sub">${date}</div>
+        <div class="topup-status ${status.cls}">${status.text}</div>
+      `;
+      topupHistory.appendChild(card);
+    });
+  } catch {
+    topupHistory.innerHTML = '<div class="conn-sub">Ошибка загрузки</div>';
+  }
+}
+
+async function loadAdminTopupHistory() {
+  if (!ADMIN_SELECTED || !adminTopupHistory) return;
+  adminTopupHistory.innerHTML = '';
+  try {
+    const items = await apiPost(`${API_URL}/api/admin/topup/history`, { target_user_id: ADMIN_SELECTED.id });
+    if (!items.length) {
+      adminTopupHistory.innerHTML = '<div class="conn-sub">Нет пополнений</div>';
+      return;
+    }
+    items.forEach(t => {
+      const status = formatTopupStatus(t.status);
+      const card = document.createElement('div');
+      card.className = 'conn-card';
+      const date = t.created_at ? new Date(t.created_at).toLocaleString('ru-RU') : '—';
+      card.innerHTML = `
+        <div class="conn-title">${Number(t.amount || 0).toFixed(2)} ₽</div>
+        <div class="conn-sub">${date}</div>
+        <div class="topup-status ${status.cls}">${status.text}</div>
+      `;
+      adminTopupHistory.appendChild(card);
+    });
+  } catch {
+    adminTopupHistory.innerHTML = '<div class="conn-sub">Ошибка загрузки</div>';
+  }
+}
 
 // API URL
 const API_URL = window.location.origin;
@@ -285,6 +390,7 @@ if (replenishBtn && topupPage) {
     userPage.classList.add('hidden');
     topupPage.classList.remove('hidden');
     sideMenu?.classList.add('hidden');
+    loadTopupHistory();
   });
 }
 
@@ -302,6 +408,7 @@ if (userBalance && topupPage) {
   userBalance.addEventListener('click', () => {
     userPage.classList.add('hidden');
     topupPage.classList.remove('hidden');
+    loadTopupHistory();
   });
 }
 
@@ -311,6 +418,50 @@ if (topupBack) {
     userPage.classList.remove('hidden');
   });
 }
+
+payTransferBtn?.addEventListener('click', async () => {
+  await loadTopupDetails();
+  openTopupSheet();
+});
+
+topupCancel?.addEventListener('click', closeTopupSheet);
+topupOverlay?.addEventListener('click', closeTopupSheet);
+
+topupSubmit?.addEventListener('click', () => {
+  const amount = parseFloat(String(topupAmountInput?.value || '').replace(',', '.'));
+  if (!amount || amount <= 0) return;
+  showTopupInfo();
+});
+
+topupCopy?.addEventListener('click', async () => {
+  try {
+    const phone = TOPUP_DETAILS.phone || '';
+    if (!phone) return;
+    try {
+      await navigator.clipboard.writeText(phone);
+    } catch {
+      const ta = document.createElement('textarea');
+      ta.value = phone;
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+  } catch {}
+});
+
+topupSent?.addEventListener('click', async () => {
+  const amount = parseFloat(String(topupAmountInput?.value || '').replace(',', '.'));
+  if (!amount || amount <= 0) return;
+  try {
+    await apiPost(`${API_URL}/api/topup/create`, { amount });
+    closeTopupSheet();
+    await loadTopupHistory();
+  } catch {}
+});
 
 if (downloadBack) {
   downloadBack.addEventListener('click', () => {
@@ -546,11 +697,18 @@ sheetTitle?.addEventListener('input', () => {
   nameSaveTimer = setTimeout(async () => {
     const newName = sheetTitle.textContent?.trim() || 'Config';
     try {
-      await apiPost(`${API_URL}/api/configs/update_name`, {
+      const url = ADMIN_SELECTED
+        ? `${API_URL}/api/admin/configs/update_name`
+        : `${API_URL}/api/configs/update_name`;
+      await apiPost(url, {
         config_id: CURRENT_OPEN_CONFIG.id,
         name: newName
       });
-      await renderConnections();
+      if (ADMIN_SELECTED) {
+        await loadAdminConfigs();
+      } else {
+        await renderConnections();
+      }
     } catch {}
   }, 600);
 });
@@ -628,6 +786,7 @@ async function openAdminUser(u) {
     }
   }
   await loadAdminConfigs();
+  await loadAdminTopupHistory();
 }
 
 async function loadAdminConfigs() {
