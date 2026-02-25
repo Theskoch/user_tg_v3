@@ -82,6 +82,7 @@ class TopUpTicket(db.Model):
     user_id = Column(Integer, nullable=False)
     amount = Column(Float, nullable=False)
     status = Column(String, default='pending')  # pending | approved | rejected
+    method = Column(String, default='transfer')  # transfer
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow)
     approved_by = Column(Integer, nullable=True)
@@ -95,6 +96,7 @@ class TopUpTicket(db.Model):
             'id': self.id,
             'user_id': self.user_id,
             'amount': self.amount,
+            'method': self.method,
             'status': self.status,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,

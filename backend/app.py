@@ -153,44 +153,52 @@ def handle_topup_callback(call):
             now = datetime.utcnow()
 
             if action == 'approve':
-                ticket.status = 'approved'
-                ticket.updated_at = now
-                ticket.approved_at = now
-                ticket.approved_by = admin.id
-                if user:
-                    user.balance = float(user.balance or 0) + float(ticket.amount)
-                db.session.commit()
-
-                if user:
-                    send_bot_message(user.telegram_id, f"Платёж подтверждён. Баланс пополнен на {ticket.amount:.2f} ₽.")
-
-                admins = User.query.filter_by(is_admin=True).all()
-                for a in admins:
-                    send_bot_message(a.telegram_id, (
-                        f"Платёж пользователя {user.first_name or ''} @{user.username or ''} "
-                        f"на сумму {ticket.amount:.2f} ₽ подтверждён админом {admin.first_name or ''} @{admin.username or ''}."
-                    ))
+                apply_topup_action(ticket, admin, approve=True)
                 bot.answer_callback_query(call.id, "Подтверждено")
 
             elif action == 'reject':
-                ticket.status = 'rejected'
-                ticket.updated_at = now
-                ticket.rejected_at = now
-                ticket.rejected_by = admin.id
-                db.session.commit()
-
-                if user:
-                    send_bot_message(user.telegram_id, "Платёж отклонён администратором.")
-
-                admins = User.query.filter_by(is_admin=True).all()
-                for a in admins:
-                    send_bot_message(a.telegram_id, (
-                        f"Платёж пользователя {user.first_name or ''} @{user.username or ''} "
-                        f"на сумму {ticket.amount:.2f} ₽ отклонён админом {admin.first_name or ''} @{admin.username or ''}."
-                    ))
+                apply_topup_action(ticket, admin, approve=False)
                 bot.answer_callback_query(call.id, "Отклонено")
     except Exception as e:
         log_auth('topup_callback_error', error=str(e))
+
+def apply_topup_action(ticket, admin_user, approve: bool):
+    user = User.query.get(ticket.user_id)
+    now = datetime.utcnow()
+    if approve:
+        ticket.status = 'approved'
+        ticket.updated_at = now
+        ticket.approved_at = now
+        ticket.approved_by = admin_user.id
+        if user:
+            user.balance = float(user.balance or 0) + float(ticket.amount)
+        db.session.commit()
+
+        if user:
+            send_bot_message(user.telegram_id, f"Платёж подтверждён. Баланс пополнен на {ticket.amount:.2f} ₽.")
+
+        admins = User.query.filter_by(is_admin=True).all()
+        for a in admins:
+            send_bot_message(a.telegram_id, (
+                f"Платёж пользователя {user.first_name or ''} @{user.username or ''} "
+                f"на сумму {ticket.amount:.2f} ₽ подтверждён админом {admin_user.first_name or ''} @{admin_user.username or ''}."
+            ))
+    else:
+        ticket.status = 'rejected'
+        ticket.updated_at = now
+        ticket.rejected_at = now
+        ticket.rejected_by = admin_user.id
+        db.session.commit()
+
+        if user:
+            send_bot_message(user.telegram_id, "Платёж отклонён администратором.")
+
+        admins = User.query.filter_by(is_admin=True).all()
+        for a in admins:
+            send_bot_message(a.telegram_id, (
+                f"Платёж пользователя {user.first_name or ''} @{user.username or ''} "
+                f"на сумму {ticket.amount:.2f} ₽ отклонён админом {admin_user.first_name or ''} @{admin_user.username or ''}."
+            ))
 
 def run_billing_cycle():
     tariffs = {t['id']: t for t in load_tariffs()}
@@ -717,7 +725,8 @@ def topup_create():
     if amount <= 0:
         return jsonify({'error': 'Bad amount'}), 400
 
-    ticket = TopUpTicket(user_id=user.id, amount=amount, status='pending')
+    method = (data.get('method') or 'transfer').strip() or 'transfer'
+    ticket = TopUpTicket(user_id=user.id, amount=amount, status='pending', method=method)
     db.session.add(ticket)
     db.session.commit()
 
@@ -746,6 +755,32 @@ def admin_topup_history():
         return jsonify({'error': 'Bad user id'}), 400
     items = TopUpTicket.query.filter_by(user_id=target_id).order_by(TopUpTicket.created_at.desc()).all()
     return jsonify([t.to_dict() for t in items])
+
+@app.route('/api/admin/topup/act', methods=['POST'])
+def admin_topup_act():
+    admin = admin_required()
+    if not admin:
+        return jsonify({'error': 'Unauthorized'}), 403
+    data = request.json or {}
+    ticket_id = data.get('ticket_id')
+    action = data.get('action')
+    try:
+        ticket_id = int(ticket_id)
+    except Exception:
+        return jsonify({'error': 'Bad ticket id'}), 400
+
+    ticket = TopUpTicket.query.get(ticket_id)
+    if not ticket or ticket.status != 'pending':
+        return jsonify({'error': 'Not found'}), 404
+
+    if action == 'approve':
+        apply_topup_action(ticket, admin, approve=True)
+    elif action == 'reject':
+        apply_topup_action(ticket, admin, approve=False)
+    else:
+        return jsonify({'error': 'Bad action'}), 400
+
+    return jsonify({'ok': True})
 
 @app.route('/user', methods=['GET'])
 def get_user():

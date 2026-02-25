@@ -444,6 +444,10 @@ button:active,
     transform: translateX(-50%) translateY(0);
 }
 
+#topup-copy-toast {
+    border-color: rgba(110,140,255,0.5);
+}
+
 .icon-btn.copy-pressed {
     transform: scale(0.92);
     box-shadow: 0 0 0 2px rgba(65,195,111,0.35);

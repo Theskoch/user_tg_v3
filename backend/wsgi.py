@@ -1,4 +1,5 @@
-from app import app, db, ensure_first_admin_code, start_billing_thread
+import threading
+from app import app, db, ensure_first_admin_code, start_billing_thread, bot
 
 if __name__ == "__main__":
     with app.app_context():
@@ -17,4 +18,5 @@ if __name__ == "__main__":
     except Exception:
         pass
     
+    threading.Thread(target=lambda: bot.infinity_polling(skip_pending=True), daemon=True).start()
     app.run(host='0.0.0.0', port=5000, debug=False)

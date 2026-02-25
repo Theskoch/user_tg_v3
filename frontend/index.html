@@ -123,6 +123,18 @@
             <button id="topup-sent" class="btn" style="background:#41c36f;">Отправил перевод</button>
         </div>
     </div>
+
+    <div id="admin-topup-overlay" class="sheet-overlay hidden"></div>
+    <div id="admin-topup-sheet" class="sheet hidden">
+        <div class="sheet-handle"></div>
+        <h4>Подтверждение пополнения</h4>
+        <div class="conn-sub" id="admin-topup-text"></div>
+        <div class="row" style="display:grid; gap:10px; margin-top:12px;">
+            <button id="admin-topup-approve" class="btn" style="background:#41c36f;">Подтвердить</button>
+            <button id="admin-topup-reject" class="btn" style="background:#ff5d5d;">Отклонить</button>
+            <button id="admin-topup-close" class="btn ghost">Закрыть</button>
+        </div>
+    </div>
     <div id="copy-toast" class="copy-toast">
         <span>✔</span>
         <span>Конфиг скопирован</span>
@@ -130,6 +142,10 @@
     <div id="invite-copy-toast" class="copy-toast">
         <span>✔</span>
         <span>Код скопирован</span>
+    </div>
+    <div id="topup-copy-toast" class="copy-toast">
+        <span>✔</span>
+        <span>Номер скопирован</span>
     </div>
 
     <div id="add-overlay" class="sheet-overlay hidden"></div>

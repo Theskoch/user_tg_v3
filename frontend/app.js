@@ -89,6 +89,15 @@ const topupCopy = document.getElementById('topup-copy');
 const topupSent = document.getElementById('topup-sent');
 const topupHistory = document.getElementById('topup-history');
 const adminTopupHistory = document.getElementById('admin-topup-history');
+const topupCopyToast = document.getElementById('topup-copy-toast');
+const adminTopupOverlay = document.getElementById('admin-topup-overlay');
+const adminTopupSheet = document.getElementById('admin-topup-sheet');
+const adminTopupText = document.getElementById('admin-topup-text');
+const adminTopupApprove = document.getElementById('admin-topup-approve');
+const adminTopupReject = document.getElementById('admin-topup-reject');
+const adminTopupClose = document.getElementById('admin-topup-close');
+
+let ADMIN_TOPUP_SELECTED = null;
 
 let TOPUP_DETAILS = { bank_name: 'Т-Банк', phone: '+79857959395' };
 
@@ -130,6 +139,30 @@ function formatTopupStatus(status) {
   return { text: 'На подтверждении', cls: 'pending' };
 }
 
+function formatTopupMethod(method) {
+  if (method === 'transfer') return 'Перевод';
+  return method || '—';
+}
+
+function openAdminTopupSheet(ticket) {
+  if (!adminTopupOverlay || !adminTopupSheet) return;
+  ADMIN_TOPUP_SELECTED = ticket;
+  if (adminTopupText) {
+    const date = ticket.created_at ? new Date(ticket.created_at).toLocaleString('ru-RU') : '—';
+    adminTopupText.textContent = `Платёж ${Number(ticket.amount || 0).toFixed(2)} ₽ • ${formatTopupMethod(ticket.method)} • ${date}`;
+  }
+  adminTopupOverlay.classList.remove('hidden');
+  adminTopupSheet.classList.remove('hidden');
+  requestAnimationFrame(() => adminTopupSheet.classList.add('show'));
+}
+
+function closeAdminTopupSheet() {
+  adminTopupSheet?.classList.remove('show');
+  adminTopupOverlay?.classList.add('hidden');
+  setTimeout(() => adminTopupSheet?.classList.add('hidden'), 250);
+  ADMIN_TOPUP_SELECTED = null;
+}
+
 async function loadTopupHistory() {
   if (!topupHistory) return;
   topupHistory.innerHTML = '';
@@ -146,7 +179,7 @@ async function loadTopupHistory() {
       const date = t.created_at ? new Date(t.created_at).toLocaleString('ru-RU') : '—';
       card.innerHTML = `
         <div class="conn-title">${Number(t.amount || 0).toFixed(2)} ₽</div>
-        <div class="conn-sub">${date}</div>
+        <div class="conn-sub">${date} • ${formatTopupMethod(t.method)}</div>
         <div class="topup-status ${status.cls}">${status.text}</div>
       `;
       topupHistory.appendChild(card);
@@ -170,11 +203,31 @@ async function loadAdminTopupHistory() {
       const card = document.createElement('div');
       card.className = 'conn-card';
       const date = t.created_at ? new Date(t.created_at).toLocaleString('ru-RU') : '—';
+      const canAct = t.status === 'pending';
       card.innerHTML = `
         <div class="conn-title">${Number(t.amount || 0).toFixed(2)} ₽</div>
-        <div class="conn-sub">${date}</div>
+        <div class="conn-sub">${date} • ${formatTopupMethod(t.method)}</div>
         <div class="topup-status ${status.cls}">${status.text}</div>
+        ${canAct ? `
+          <div class="row" style="display:flex; gap:8px; margin-top:8px;">
+            <button class="btn" data-action="approve">Подтвердить</button>
+            <button class="btn ghost" data-action="reject">Отклонить</button>
+          </div>
+        ` : ''}
       `;
+      if (canAct) {
+        const btns = card.querySelectorAll('button');
+        const [approveBtn, rejectBtn] = btns;
+        approveBtn?.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openAdminTopupSheet(t);
+        });
+        rejectBtn?.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openAdminTopupSheet(t);
+        });
+        card.addEventListener('click', () => openAdminTopupSheet(t));
+      }
       adminTopupHistory.appendChild(card);
     });
   } catch {
@@ -450,6 +503,10 @@ topupCopy?.addEventListener('click', async () => {
       document.execCommand('copy');
       document.body.removeChild(ta);
     }
+    if (topupCopyToast) {
+      topupCopyToast.classList.add('show');
+      setTimeout(() => topupCopyToast.classList.remove('show'), 1800);
+    }
   } catch {}
 });
 
@@ -457,11 +514,29 @@ topupSent?.addEventListener('click', async () => {
   const amount = parseFloat(String(topupAmountInput?.value || '').replace(',', '.'));
   if (!amount || amount <= 0) return;
   try {
-    await apiPost(`${API_URL}/api/topup/create`, { amount });
+    await apiPost(`${API_URL}/api/topup/create`, { amount, method: 'transfer' });
     closeTopupSheet();
     await loadTopupHistory();
   } catch {}
 });
+
+adminTopupApprove?.addEventListener('click', async () => {
+  if (!ADMIN_TOPUP_SELECTED) return;
+  await apiPost(`${API_URL}/api/admin/topup/act`, { ticket_id: ADMIN_TOPUP_SELECTED.id, action: 'approve' });
+  closeAdminTopupSheet();
+  await loadAdminTopupHistory();
+  await loadAdminUsers();
+});
+
+adminTopupReject?.addEventListener('click', async () => {
+  if (!ADMIN_TOPUP_SELECTED) return;
+  await apiPost(`${API_URL}/api/admin/topup/act`, { ticket_id: ADMIN_TOPUP_SELECTED.id, action: 'reject' });
+  closeAdminTopupSheet();
+  await loadAdminTopupHistory();
+});
+
+adminTopupClose?.addEventListener('click', closeAdminTopupSheet);
+adminTopupOverlay?.addEventListener('click', closeAdminTopupSheet);
 
 if (downloadBack) {
   downloadBack.addEventListener('click', () => {
