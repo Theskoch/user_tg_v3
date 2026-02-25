@@ -6,3 +6,4 @@ class Config:
     SQLALCHEMY_DATABASE_URI = 'sqlite:///users.db'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     PERMANENT_SESSION_LIFETIME = 60 * 60 * 24 * 365 * 10
+    WEBAPP_URL = os.environ.get('WEBAPP_URL')

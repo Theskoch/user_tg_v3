@@ -211,23 +211,7 @@ async function loadAdminTopupHistory() {
         <div class="conn-title">${Number(t.amount || 0).toFixed(2)} ₽</div>
         <div class="conn-sub">${date} • ${formatTopupMethod(t.method)}</div>
         <div class="topup-status ${status.cls}">${status.text}</div>
-        ${canAct ? `
-          <div class="row" style="display:flex; gap:8px; margin-top:8px;">
-            <button class="btn" data-action="approve">Подтвердить</button>
-            <button class="btn ghost" data-action="reject">Отклонить</button>
-          </div>
-        ` : ''}
       `;
-      const btns = card.querySelectorAll('button');
-      const [approveBtn, rejectBtn] = btns;
-      approveBtn?.addEventListener('click', (e) => {
-        e.stopPropagation();
-        openAdminTopupSheet(t);
-      });
-      rejectBtn?.addEventListener('click', (e) => {
-        e.stopPropagation();
-        openAdminTopupSheet(t);
-      });
       card.addEventListener('click', () => openAdminTopupSheet(t));
       adminTopupHistory.appendChild(card);
     });
@@ -831,10 +815,16 @@ async function loadAdminUsers() {
     card.addEventListener('click', () => openAdminUser(u));
     adminUsersBox.appendChild(card);
   });
+
+  if (ADMIN_SELECTED) {
+    const fresh = ADMIN_USERS.find(x => x.id === ADMIN_SELECTED.id);
+    if (fresh) ADMIN_SELECTED = fresh;
+  }
 }
 
 async function openAdminUser(u) {
   ADMIN_SELECTED = u;
+  userPage?.classList.add('hidden');
   adminPage.classList.add('hidden');
   adminUserPage.classList.remove('hidden');
   if (adminInitialUser && !adminInitialUser.textContent) {
@@ -863,6 +853,43 @@ async function openAdminUser(u) {
   }
   await loadAdminConfigs();
   await loadAdminTopupHistory();
+  await autoOpenFromQuery();
+}
+
+function getQueryParams() {
+  const params = new URLSearchParams(window.location.search || '');
+  const obj = {};
+  params.forEach((v, k) => { obj[k] = v; });
+  return obj;
+}
+
+async function openAdminUserById(userId) {
+  if (!userId) return false;
+  if (!ADMIN_USERS?.length) await loadAdminUsers();
+  const user = ADMIN_USERS.find(u => String(u.id) === String(userId));
+  if (!user) return false;
+  await openAdminUser(user);
+  return true;
+}
+
+async function autoOpenFromQuery() {
+  const q = getQueryParams();
+  if (!q.admin || !q.user_id) return;
+  if (!ADMIN_SELECTED || String(ADMIN_SELECTED.id) !== String(q.user_id)) return;
+  if (q.ticket_id) {
+    const items = await apiPost(`${API_URL}/api/admin/topup/history`, { target_user_id: ADMIN_SELECTED.id });
+    const ticket = items.find(t => String(t.id) === String(q.ticket_id));
+    if (ticket) openAdminTopupSheet(ticket);
+  }
+}
+
+async function autoOpenAdminFromQuery() {
+  const q = getQueryParams();
+  if (!q.admin || !q.user_id) return;
+  const opened = await openAdminUserById(q.user_id);
+  if (opened) {
+    await autoOpenFromQuery();
+  }
 }
 
 async function loadAdminConfigs() {
@@ -1110,6 +1137,11 @@ async function tryAutoLogin() {
         adminBtn.classList.remove('hidden');
       }
       await renderConnections();
+      await loadAdminUsers();
+      if (userData.is_admin) {
+        await loadTariffs();
+        await autoOpenAdminFromQuery();
+      }
     }
   } catch (e) {
     // silent

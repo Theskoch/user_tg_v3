@@ -121,11 +121,26 @@ def build_topup_admin_markup(ticket_id):
 
 def notify_admins_topup(ticket, user):
     admins = User.query.filter_by(is_admin=True).all()
+    webapp_url = app.config.get('WEBAPP_URL')
+    if not webapp_url:
+        webapp_url = app.config.get('BASE_URL') if hasattr(app.config, 'BASE_URL') else None
+    if not webapp_url:
+        try:
+            host = os.environ.get('HOSTNAME') or 'localhost:5000'
+            webapp_url = f"https://{host}" if not host.startswith('http') else host
+        except Exception:
+            webapp_url = None
+    link = None
+    if webapp_url:
+        link = f"{webapp_url}/?admin=1&user_id={user.id}&ticket_id={ticket.id}"
     text = (
         f"Пользователь {user.first_name or ''} @{user.username or ''} отправил перевод на сумму "
-        f"{ticket.amount:.2f} ₽. Подтверждаете?"
+        f"{ticket.amount:.2f} ₽. Откройте приложение для подтверждения."
     )
-    markup = build_topup_admin_markup(ticket.id)
+    markup = None
+    if link:
+        markup = types.InlineKeyboardMarkup()
+        markup.add(types.InlineKeyboardButton("Открыть приложение", url=link))
     for admin in admins:
         send_bot_message_with_markup(admin.telegram_id, text, markup=markup)
     ticket.last_admin_notify_at = datetime.utcnow()
