@@ -357,6 +357,16 @@ function applyTariffUi(userData) {
   }
 }
 
+async function refreshUserBalance() {
+  try {
+    const userData = await apiGet(`${API_URL}/user`);
+    const balance = Number(userData.balance || 0).toFixed(2);
+    if (userBalance) userBalance.textContent = `${balance} ₽`;
+    if (userBalanceTopup) userBalanceTopup.textContent = `${balance} ₽`;
+    applyTariffUi(userData);
+  } catch {}
+}
+
 // Authentication
 loginBtn.addEventListener('click', async () => {
     const code = accessCodeInput.value.trim();
@@ -435,7 +445,8 @@ loginBtn.addEventListener('click', async () => {
             if (userData.is_admin) {
                 adminBtn.classList.remove('hidden');
             }
-            await renderConnections();
+        await renderConnections();
+        setInterval(refreshUserBalance, 20000);
         } else {
             errorMessage.textContent = data.message || 'Неверный код доступа';
         }
@@ -1237,6 +1248,8 @@ async function tryAutoLogin() {
         await loadTariffs();
         await autoOpenAdminFromQuery();
       }
+
+      setInterval(refreshUserBalance, 20000);
     }
   } catch (e) {
     // silent

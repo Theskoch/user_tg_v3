@@ -163,8 +163,17 @@ def notify_admins_topup(ticket, user):
         text += f"\n\nОткрыть в Telegram: {tg_link}"
     elif link:
         text += f"\n\nСсылка: {link}"
+
+    markup = None
+    if tg_link:
+        markup = types.InlineKeyboardMarkup()
+        markup.add(types.InlineKeyboardButton("Открыть в Telegram", web_app=types.WebAppInfo(tg_link)))
+
     for admin in admins:
-        send_bot_message(admin.telegram_id, text)
+        if markup:
+            send_bot_message_with_markup(admin.telegram_id, text, markup)
+        else:
+            send_bot_message(admin.telegram_id, text)
     ticket.last_admin_notify_at = datetime.utcnow()
     log_auth('topup_notify_admins', ticket_id=ticket.id, admins=[a.telegram_id for a in admins], link=link)
 
