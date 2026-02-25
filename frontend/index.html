@@ -74,6 +74,20 @@
         <div class="card glass">
             <h3>История пополнений</h3>
             <div id="topup-history" class="connections-grid"></div>
+            <button id="topup-history-more" class="btn ghost" type="button">Все пополнения</button>
+        </div>
+    </div>
+
+    <div id="topup-all-page" class="page hidden">
+        <header>
+            <div class="user-avatar" id="user-initial-topup-all"></div>
+            <div class="balance">Все пополнения</div>
+            <button id="topup-all-back" class="icon-btn" type="button">←</button>
+        </header>
+
+        <div class="card glass">
+            <h3>История пополнений</h3>
+            <div id="topup-history-all" class="connections-grid"></div>
         </div>
     </div>
 
@@ -246,9 +260,23 @@
         <div class="card glass">
             <h3>История пополнений</h3>
             <div id="admin-topup-history" class="connections-grid"></div>
+            <button id="admin-topup-history-more" class="btn ghost" type="button">Все пополнения</button>
         </div>
 
         <button id="admin-user-delete" class="btn ghost">Удалить пользователя</button>
+    </div>
+
+    <div id="admin-topup-all-page" class="page hidden">
+        <header>
+            <div class="user-avatar" id="user-initial-admin-topup-all"></div>
+            <div class="balance">Все пополнения</div>
+            <button id="admin-topup-all-back" class="icon-btn" type="button">←</button>
+        </header>
+
+        <div class="card glass">
+            <h3>История пополнений</h3>
+            <div id="admin-topup-history-all" class="connections-grid"></div>
+        </div>
     </div>
 
     <script src="app.js?v=2026-02-25-23"></script>

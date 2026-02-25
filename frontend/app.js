@@ -88,7 +88,17 @@ const topupInfoText = document.getElementById('topup-info-text');
 const topupCopy = document.getElementById('topup-copy');
 const topupSent = document.getElementById('topup-sent');
 const topupHistory = document.getElementById('topup-history');
+const topupHistoryMore = document.getElementById('topup-history-more');
+const topupAllPage = document.getElementById('topup-all-page');
+const topupAllBack = document.getElementById('topup-all-back');
+const topupHistoryAll = document.getElementById('topup-history-all');
+const userInitialTopupAll = document.getElementById('user-initial-topup-all');
 const adminTopupHistory = document.getElementById('admin-topup-history');
+const adminTopupHistoryMore = document.getElementById('admin-topup-history-more');
+const adminTopupAllPage = document.getElementById('admin-topup-all-page');
+const adminTopupAllBack = document.getElementById('admin-topup-all-back');
+const adminTopupHistoryAll = document.getElementById('admin-topup-history-all');
+const adminInitialTopupAll = document.getElementById('user-initial-admin-topup-all');
 const topupCopyToast = document.getElementById('topup-copy-toast');
 const adminTopupOverlay = document.getElementById('admin-topup-overlay');
 const adminTopupSheet = document.getElementById('admin-topup-sheet');
@@ -139,6 +149,20 @@ function formatTopupStatus(status) {
   return { text: 'На подтверждении', cls: 'pending' };
 }
 
+function renderTopupCard(t) {
+  const status = formatTopupStatus(t.status);
+  const card = document.createElement('div');
+  card.className = 'conn-card';
+  const date = t.created_at ? new Date(t.created_at).toLocaleString('ru-RU') : '—';
+  if (t.status === 'pending') card.classList.add('pending-highlight');
+  card.innerHTML = `
+    <div class="conn-title">${Number(t.amount || 0).toFixed(2)} ₽</div>
+    <div class="conn-sub">${date} • ${formatTopupMethod(t.method)}</div>
+    <div class="topup-status ${status.cls}">${status.text}</div>
+  `;
+  return card;
+}
+
 function formatTopupMethod(method) {
   if (method === 'transfer') return 'Перевод';
   return method || '—';
@@ -173,22 +197,33 @@ async function loadTopupHistory() {
     const items = await apiGet(`${API_URL}/api/topup/history`);
     if (!items.length) {
       topupHistory.innerHTML = '<div class="conn-sub">Пока нет пополнений</div>';
+      if (topupHistoryMore) topupHistoryMore.classList.add('hidden');
       return;
     }
-    items.forEach(t => {
-      const status = formatTopupStatus(t.status);
-      const card = document.createElement('div');
-      card.className = 'conn-card';
-      const date = t.created_at ? new Date(t.created_at).toLocaleString('ru-RU') : '—';
-      card.innerHTML = `
-        <div class="conn-title">${Number(t.amount || 0).toFixed(2)} ₽</div>
-        <div class="conn-sub">${date} • ${formatTopupMethod(t.method)}</div>
-        <div class="topup-status ${status.cls}">${status.text}</div>
-      `;
-      topupHistory.appendChild(card);
-    });
+    const visible = items.slice(0, 3);
+    visible.forEach(t => topupHistory.appendChild(renderTopupCard(t)));
+    if (topupHistoryMore) {
+      if (items.length > 3) topupHistoryMore.classList.remove('hidden');
+      else topupHistoryMore.classList.add('hidden');
+    }
   } catch {
     topupHistory.innerHTML = '<div class="conn-sub">Ошибка загрузки</div>';
+    if (topupHistoryMore) topupHistoryMore.classList.add('hidden');
+  }
+}
+
+async function loadTopupHistoryAll() {
+  if (!topupHistoryAll) return;
+  topupHistoryAll.innerHTML = '';
+  try {
+    const items = await apiGet(`${API_URL}/api/topup/history`);
+    if (!items.length) {
+      topupHistoryAll.innerHTML = '<div class="conn-sub">Пока нет пополнений</div>';
+      return;
+    }
+    items.forEach(t => topupHistoryAll.appendChild(renderTopupCard(t)));
+  } catch {
+    topupHistoryAll.innerHTML = '<div class="conn-sub">Ошибка загрузки</div>';
   }
 }
 
@@ -199,24 +234,41 @@ async function loadAdminTopupHistory() {
     const items = await apiPost(`${API_URL}/api/admin/topup/history`, { target_user_id: ADMIN_SELECTED.id });
     if (!items.length) {
       adminTopupHistory.innerHTML = '<div class="conn-sub">Нет пополнений</div>';
+      if (adminTopupHistoryMore) adminTopupHistoryMore.classList.add('hidden');
       return;
     }
-    items.forEach(t => {
-      const status = formatTopupStatus(t.status);
-      const card = document.createElement('div');
-      card.className = 'conn-card';
-      const date = t.created_at ? new Date(t.created_at).toLocaleString('ru-RU') : '—';
-      const canAct = t.status === 'pending';
-      card.innerHTML = `
-        <div class="conn-title">${Number(t.amount || 0).toFixed(2)} ₽</div>
-        <div class="conn-sub">${date} • ${formatTopupMethod(t.method)}</div>
-        <div class="topup-status ${status.cls}">${status.text}</div>
-      `;
+    const visible = items.slice(0, 3);
+    visible.forEach(t => {
+      const card = renderTopupCard(t);
       card.addEventListener('click', () => openAdminTopupSheet(t));
       adminTopupHistory.appendChild(card);
     });
+    if (adminTopupHistoryMore) {
+      if (items.length > 3) adminTopupHistoryMore.classList.remove('hidden');
+      else adminTopupHistoryMore.classList.add('hidden');
+    }
   } catch {
     adminTopupHistory.innerHTML = '<div class="conn-sub">Ошибка загрузки</div>';
+    if (adminTopupHistoryMore) adminTopupHistoryMore.classList.add('hidden');
+  }
+}
+
+async function loadAdminTopupHistoryAll() {
+  if (!ADMIN_SELECTED || !adminTopupHistoryAll) return;
+  adminTopupHistoryAll.innerHTML = '';
+  try {
+    const items = await apiPost(`${API_URL}/api/admin/topup/history`, { target_user_id: ADMIN_SELECTED.id });
+    if (!items.length) {
+      adminTopupHistoryAll.innerHTML = '<div class="conn-sub">Нет пополнений</div>';
+      return;
+    }
+    items.forEach(t => {
+      const card = renderTopupCard(t);
+      card.addEventListener('click', () => openAdminTopupSheet(t));
+      adminTopupHistoryAll.appendChild(card);
+    });
+  } catch {
+    adminTopupHistoryAll.innerHTML = '<div class="conn-sub">Ошибка загрузки</div>';
   }
 }
 
@@ -457,6 +509,22 @@ if (topupBack) {
   });
 }
 
+if (topupHistoryMore && topupAllPage) {
+  topupHistoryMore.addEventListener('click', async () => {
+    topupPage.classList.add('hidden');
+    topupAllPage.classList.remove('hidden');
+    if (userInitialTopupAll) userInitialTopupAll.textContent = userInitial.textContent || 'U';
+    await loadTopupHistoryAll();
+  });
+}
+
+if (topupAllBack) {
+  topupAllBack.addEventListener('click', () => {
+    topupAllPage.classList.add('hidden');
+    topupPage.classList.remove('hidden');
+  });
+}
+
 payTransferBtn?.addEventListener('click', async () => {
   await loadTopupDetails();
   openTopupSheet();
@@ -522,6 +590,25 @@ adminTopupReject?.addEventListener('click', async () => {
 
 adminTopupClose?.addEventListener('click', closeAdminTopupSheet);
 adminTopupOverlay?.addEventListener('click', closeAdminTopupSheet);
+
+if (adminTopupHistoryMore && adminTopupAllPage) {
+  adminTopupHistoryMore.addEventListener('click', async () => {
+    adminUserPage.classList.add('hidden');
+    adminTopupAllPage.classList.remove('hidden');
+    if (adminInitialTopupAll) {
+      const initial = (ADMIN_SELECTED?.first_name || userInitial.textContent || 'A')[0].toUpperCase();
+      adminInitialTopupAll.textContent = initial;
+    }
+    await loadAdminTopupHistoryAll();
+  });
+}
+
+if (adminTopupAllBack) {
+  adminTopupAllBack.addEventListener('click', () => {
+    adminTopupAllPage.classList.add('hidden');
+    adminUserPage.classList.remove('hidden');
+  });
+}
 
 if (downloadBack) {
   downloadBack.addEventListener('click', () => {
@@ -916,6 +1003,14 @@ async function loadAdminConfigs() {
     });
     adminConfigsBox.appendChild(card);
   });
+}
+
+async function loadConnectionTypes() {
+  await fetchConnectionTypes();
+  if (addType) {
+    const options = CONNECTION_TYPES.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+    addType.innerHTML = `<option value="">—</option>${options}`;
+  }
 }
 
 inviteAdminBtn?.addEventListener('click', async () => {

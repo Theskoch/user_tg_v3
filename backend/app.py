@@ -149,11 +149,19 @@ def notify_admins_topup(ticket, user):
     link = None
     if webapp_url:
         link = f"{webapp_url}/?admin=1&user_id={user.id}&ticket_id={ticket.id}"
+    tg_link = None
+    bot_username = app.config.get('BOT_USERNAME')
+    short_name = app.config.get('WEBAPP_SHORT_NAME')
+    if bot_username and short_name:
+        bot_username = str(bot_username).lstrip('@')
+        tg_link = f"https://t.me/{bot_username}/{short_name}?startapp=admin=1&user_id={user.id}&ticket_id={ticket.id}"
     text = (
         f"Пользователь {user.first_name or ''} @{user.username or ''} отправил перевод на сумму "
         f"{ticket.amount:.2f} ₽. Откройте приложение для подтверждения."
     )
-    if link:
+    if tg_link:
+        text += f"\n\nОткрыть в Telegram: {tg_link}"
+    elif link:
         text += f"\n\nСсылка: {link}"
     for admin in admins:
         send_bot_message(admin.telegram_id, text)

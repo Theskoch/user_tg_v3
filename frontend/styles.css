@@ -73,6 +73,11 @@ body::-webkit-scrollbar {
     box-shadow: 0 8px 22px rgba(48,80,255,0.35);
 }
 
+#topup-history-more,
+#admin-topup-history-more {
+    margin-top: 12px;
+}
+
 .btn {
     width: 100%;
     padding: 12px 14px;
@@ -242,6 +247,11 @@ header {
     backdrop-filter: blur(14px);
     cursor: pointer;
     position: relative;
+}
+
+.conn-card.pending-highlight {
+    border: 1px solid rgba(65,195,111,0.9);
+    box-shadow: 0 0 0 2px rgba(65,195,111,0.35), 0 12px 26px rgba(0,0,0,0.35);
 }
 
 .conn-card.used {
