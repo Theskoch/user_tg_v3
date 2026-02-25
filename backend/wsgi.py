@@ -18,5 +18,9 @@ if __name__ == "__main__":
     except Exception:
         pass
     
+    try:
+        bot.delete_webhook(drop_pending_updates=True)
+    except Exception:
+        pass
     threading.Thread(target=lambda: bot.infinity_polling(skip_pending=True), daemon=True).start()
     app.run(host='0.0.0.0', port=5000, debug=False)

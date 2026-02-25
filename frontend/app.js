@@ -129,7 +129,7 @@ function showTopupInfo() {
   if (topupStepAmount) topupStepAmount.classList.add('hidden');
   if (topupStepInfo) topupStepInfo.classList.remove('hidden');
   if (topupInfoText) {
-    topupInfoText.textContent = `Для пополнения совершите перевод на ${TOPUP_DETAILS.bank_name}, по номеру ${TOPUP_DETAILS.phone} и ожидайте зачисление. Зачисление средств происходит в течение 1–2 часов, максимум 24 часа.`;
+    topupInfoText.textContent = `Тип пополнения: Перевод. Для пополнения совершите перевод на ${TOPUP_DETAILS.bank_name}, по номеру ${TOPUP_DETAILS.phone} и ожидайте зачисление. Зачисление средств происходит в течение 1–2 часов, максимум 24 часа.`;
   }
 }
 
@@ -151,6 +151,9 @@ function openAdminTopupSheet(ticket) {
     const date = ticket.created_at ? new Date(ticket.created_at).toLocaleString('ru-RU') : '—';
     adminTopupText.textContent = `Платёж ${Number(ticket.amount || 0).toFixed(2)} ₽ • ${formatTopupMethod(ticket.method)} • ${date}`;
   }
+  const canAct = ticket?.status === 'pending';
+  if (adminTopupApprove) adminTopupApprove.disabled = !canAct;
+  if (adminTopupReject) adminTopupReject.disabled = !canAct;
   adminTopupOverlay.classList.remove('hidden');
   adminTopupSheet.classList.remove('hidden');
   requestAnimationFrame(() => adminTopupSheet.classList.add('show'));
@@ -215,19 +218,17 @@ async function loadAdminTopupHistory() {
           </div>
         ` : ''}
       `;
-      if (canAct) {
-        const btns = card.querySelectorAll('button');
-        const [approveBtn, rejectBtn] = btns;
-        approveBtn?.addEventListener('click', (e) => {
-          e.stopPropagation();
-          openAdminTopupSheet(t);
-        });
-        rejectBtn?.addEventListener('click', (e) => {
-          e.stopPropagation();
-          openAdminTopupSheet(t);
-        });
-        card.addEventListener('click', () => openAdminTopupSheet(t));
-      }
+      const btns = card.querySelectorAll('button');
+      const [approveBtn, rejectBtn] = btns;
+      approveBtn?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openAdminTopupSheet(t);
+      });
+      rejectBtn?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openAdminTopupSheet(t);
+      });
+      card.addEventListener('click', () => openAdminTopupSheet(t));
       adminTopupHistory.appendChild(card);
     });
   } catch {
