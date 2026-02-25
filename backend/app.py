@@ -133,10 +133,19 @@ def notify_admins_topup(ticket, user):
         webapp_url = app.config.get('BASE_URL') if hasattr(app.config, 'BASE_URL') else None
     if not webapp_url:
         try:
+            webapp_url = request.host_url.rstrip('/') if request else None
+        except Exception:
+            webapp_url = None
+    if not webapp_url:
+        try:
             host = os.environ.get('HOSTNAME') or 'localhost:5000'
             webapp_url = f"https://{host}" if not host.startswith('http') else host
         except Exception:
             webapp_url = None
+    if webapp_url:
+        webapp_url = webapp_url.rstrip('/')
+        if webapp_url.startswith('http://') and 'localhost' not in webapp_url and '127.0.0.1' not in webapp_url:
+            webapp_url = webapp_url.replace('http://', 'https://', 1)
     link = None
     if webapp_url:
         link = f"{webapp_url}/?admin=1&user_id={user.id}&ticket_id={ticket.id}"
@@ -144,12 +153,10 @@ def notify_admins_topup(ticket, user):
         f"Пользователь {user.first_name or ''} @{user.username or ''} отправил перевод на сумму "
         f"{ticket.amount:.2f} ₽. Откройте приложение для подтверждения."
     )
-    markup = None
     if link:
-        markup = types.InlineKeyboardMarkup()
-        markup.add(types.InlineKeyboardButton("Открыть приложение", url=link))
+        text += f"\n\nСсылка: {link}"
     for admin in admins:
-        send_bot_message_with_markup(admin.telegram_id, text, markup=markup)
+        send_bot_message(admin.telegram_id, text)
     ticket.last_admin_notify_at = datetime.utcnow()
     log_auth('topup_notify_admins', ticket_id=ticket.id, admins=[a.telegram_id for a in admins], link=link)
 
