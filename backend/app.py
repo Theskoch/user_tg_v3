@@ -97,19 +97,23 @@ def add_months(dt: datetime, months: int) -> datetime:
 
 def send_bot_message(chat_id, text):
     if not BOT_TOKEN:
+        log_auth('bot_send_skip', reason='no_bot_token', chat_id=chat_id)
         return
     try:
         bot.send_message(chat_id, text)
+        log_auth('bot_send_ok', chat_id=chat_id, text_preview=str(text)[:120])
     except Exception as e:
-        log_auth('bot_send_error', error=str(e))
+        log_auth('bot_send_error', chat_id=chat_id, error=str(e))
 
 def send_bot_message_with_markup(chat_id, text, markup=None):
     if not BOT_TOKEN:
+        log_auth('bot_send_skip', reason='no_bot_token', chat_id=chat_id)
         return
     try:
         bot.send_message(chat_id, text, reply_markup=markup)
+        log_auth('bot_send_ok', chat_id=chat_id, text_preview=str(text)[:120])
     except Exception as e:
-        log_auth('bot_send_error', error=str(e))
+        log_auth('bot_send_error', chat_id=chat_id, error=str(e))
 
 def build_topup_admin_markup(ticket_id):
     markup = types.InlineKeyboardMarkup(row_width=2)
@@ -121,6 +125,9 @@ def build_topup_admin_markup(ticket_id):
 
 def notify_admins_topup(ticket, user):
     admins = User.query.filter_by(is_admin=True).all()
+    if not admins:
+        log_auth('topup_notify_admins', reason='no_admins', ticket_id=ticket.id)
+        return
     webapp_url = app.config.get('WEBAPP_URL')
     if not webapp_url:
         webapp_url = app.config.get('BASE_URL') if hasattr(app.config, 'BASE_URL') else None
@@ -144,6 +151,7 @@ def notify_admins_topup(ticket, user):
     for admin in admins:
         send_bot_message_with_markup(admin.telegram_id, text, markup=markup)
     ticket.last_admin_notify_at = datetime.utcnow()
+    log_auth('topup_notify_admins', ticket_id=ticket.id, admins=[a.telegram_id for a in admins], link=link)
 
 @bot.callback_query_handler(func=lambda call: call.data and call.data.startswith('topup:'))
 def handle_topup_callback(call):
