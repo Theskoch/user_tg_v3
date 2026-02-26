@@ -106,6 +106,12 @@ const adminTopupText = document.getElementById('admin-topup-text');
 const adminTopupApprove = document.getElementById('admin-topup-approve');
 const adminTopupReject = document.getElementById('admin-topup-reject');
 const adminTopupClose = document.getElementById('admin-topup-close');
+const adminPendingCard = document.getElementById('admin-pending-card');
+const adminPendingOpen = document.getElementById('admin-pending-open');
+const adminPendingPage = document.getElementById('admin-pending-page');
+const adminPendingBack = document.getElementById('admin-pending-back');
+const adminPendingList = document.getElementById('admin-pending-list');
+const adminInitialPending = document.getElementById('user-initial-admin-pending');
 
 let ADMIN_TOPUP_SELECTED = null;
 
@@ -161,6 +167,39 @@ function renderTopupCard(t) {
     <div class="topup-status ${status.cls}">${status.text}</div>
   `;
   return card;
+}
+
+async function loadAdminPendingTopups() {
+  if (!adminPendingList) return;
+  adminPendingList.innerHTML = '';
+  try {
+    const items = await apiGet(`${API_URL}/api/admin/topup/pending`);
+    if (!items.length) {
+      adminPendingList.innerHTML = '<div class="conn-sub">Нет платежей на подтверждение</div>';
+      return;
+    }
+    items.forEach(t => {
+      const card = renderTopupCard(t);
+      card.addEventListener('click', () => openAdminTopupSheet(t));
+      adminPendingList.appendChild(card);
+    });
+  } catch {
+    adminPendingList.innerHTML = '<div class="conn-sub">Ошибка загрузки</div>';
+  }
+}
+
+async function updatePendingBadge() {
+  if (!adminPendingCard) return;
+  try {
+    const items = await apiGet(`${API_URL}/api/admin/topup/pending`);
+    if (items.length) {
+      adminPendingCard.classList.remove('hidden');
+    } else {
+      adminPendingCard.classList.add('hidden');
+    }
+  } catch {
+    adminPendingCard.classList.add('hidden');
+  }
 }
 
 function formatTopupMethod(method) {
@@ -489,6 +528,7 @@ if (adminBtn && adminPage) {
     if (adminInitial) adminInitial.textContent = userInitial.textContent || 'A';
     await loadAdminUsers();
     await loadTariffs();
+    await updatePendingBadge();
   });
 }
 
@@ -499,6 +539,20 @@ adminBack?.addEventListener('click', () => {
 
 adminUserBack?.addEventListener('click', () => {
   adminUserPage.classList.add('hidden');
+  adminPage.classList.remove('hidden');
+});
+
+adminPendingOpen?.addEventListener('click', async () => {
+  adminPage.classList.add('hidden');
+  adminPendingPage?.classList.remove('hidden');
+  if (adminInitialPending) {
+    adminInitialPending.textContent = userInitial.textContent || 'A';
+  }
+  await loadAdminPendingTopups();
+});
+
+adminPendingBack?.addEventListener('click', () => {
+  adminPendingPage?.classList.add('hidden');
   adminPage.classList.remove('hidden');
 });
 
@@ -606,6 +660,8 @@ adminTopupApprove?.addEventListener('click', async () => {
   await apiPost(`${API_URL}/api/admin/topup/act`, { ticket_id: ADMIN_TOPUP_SELECTED.id, action: 'approve' });
   closeAdminTopupSheet();
   await loadAdminTopupHistory();
+  await loadAdminPendingTopups();
+  await updatePendingBadge();
   await loadAdminUsers();
 });
 
@@ -614,6 +670,9 @@ adminTopupReject?.addEventListener('click', async () => {
   await apiPost(`${API_URL}/api/admin/topup/act`, { ticket_id: ADMIN_TOPUP_SELECTED.id, action: 'reject' });
   closeAdminTopupSheet();
   await loadAdminTopupHistory();
+  await loadAdminPendingTopups();
+  await updatePendingBadge();
+  await loadAdminUsers();
 });
 
 adminTopupClose?.addEventListener('click', closeAdminTopupSheet);
@@ -1264,6 +1323,7 @@ async function tryAutoLogin() {
       if (userData.is_admin) {
         await loadTariffs();
         await autoOpenAdminFromQuery();
+        await updatePendingBadge();
       }
 
       setInterval(refreshUserBalance, 20000);

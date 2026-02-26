@@ -132,10 +132,8 @@ def notify_admins_topup(ticket, user):
         f"Пользователь {user.first_name or ''} @{user.username or ''} отправил перевод на сумму "
         f"{ticket.amount:.2f} ₽. Откройте приложение для подтверждения."
     )
-    markup = build_topup_admin_markup(ticket.id)
-
     for admin in admins:
-        send_bot_message_with_markup(admin.telegram_id, text, markup)
+        send_bot_message(admin.telegram_id, text)
     ticket.last_admin_notify_at = datetime.utcnow()
     log_auth('topup_notify_admins', ticket_id=ticket.id, admins=[a.telegram_id for a in admins])
 
@@ -806,6 +804,13 @@ def admin_topup_act():
         return jsonify({'error': 'Bad action'}), 400
 
     return jsonify({'ok': True})
+
+@app.route('/api/admin/topup/pending', methods=['GET'])
+def admin_topup_pending():
+    if not admin_required():
+        return jsonify({'error': 'Unauthorized'}), 403
+    items = TopUpTicket.query.filter_by(status='pending').order_by(TopUpTicket.created_at.desc()).all()
+    return jsonify([t.to_dict() for t in items])
 
 @app.route('/user', methods=['GET'])
 def get_user():

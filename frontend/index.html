@@ -191,6 +191,11 @@
             <button id="admin-back" class="icon-btn" type="button">←</button>
         </header>
 
+        <div class="card glass hidden" id="admin-pending-card">
+            <h3>Ожидают подтверждения</h3>
+            <button id="admin-pending-open" class="btn" type="button">Перейти</button>
+        </div>
+
         <div class="card glass">
             <h3>Пригласить пользователя</h3>
             <div class="row" style="display:grid; gap:8px;">
@@ -211,6 +216,19 @@
         <div class="card glass">
             <h3>Пользователи</h3>
             <div id="admin-users" class="connections-grid"></div>
+        </div>
+    </div>
+
+    <div id="admin-pending-page" class="page hidden">
+        <header>
+            <div class="user-avatar" id="user-initial-admin-pending"></div>
+            <div class="balance">Ожидают подтверждения</div>
+            <button id="admin-pending-back" class="icon-btn" type="button">←</button>
+        </header>
+
+        <div class="card glass">
+            <h3>Платежи на подтверждение</h3>
+            <div id="admin-pending-list" class="connections-grid"></div>
         </div>
     </div>
 
