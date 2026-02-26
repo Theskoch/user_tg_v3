@@ -173,11 +173,28 @@ function openAdminTopupSheet(ticket) {
   ADMIN_TOPUP_SELECTED = ticket;
   if (adminTopupText) {
     const date = ticket.created_at ? new Date(ticket.created_at).toLocaleString('ru-RU') : '—';
-    adminTopupText.textContent = `Платёж ${Number(ticket.amount || 0).toFixed(2)} ₽ • ${formatTopupMethod(ticket.method)} • ${date}`;
+    const status = formatTopupStatus(ticket.status);
+    let extra = '';
+    if (ticket.status === 'approved') {
+      const who = ticket.approved_by_name || '—';
+      const when = ticket.approved_at ? new Date(ticket.approved_at).toLocaleString('ru-RU') : '—';
+      extra = `\nПодтвердил: ${who}\nДата: ${when}`;
+    } else if (ticket.status === 'rejected') {
+      const who = ticket.rejected_by_name || '—';
+      const when = ticket.rejected_at ? new Date(ticket.rejected_at).toLocaleString('ru-RU') : '—';
+      extra = `\nОтклонил: ${who}\nДата: ${when}`;
+    }
+    adminTopupText.textContent = `Платёж ${Number(ticket.amount || 0).toFixed(2)} ₽ • ${formatTopupMethod(ticket.method)} • ${date}\nСтатус: ${status.text}${extra}`;
   }
   const canAct = ticket?.status === 'pending';
-  if (adminTopupApprove) adminTopupApprove.disabled = !canAct;
-  if (adminTopupReject) adminTopupReject.disabled = !canAct;
+  if (adminTopupApprove) {
+    adminTopupApprove.disabled = !canAct;
+    adminTopupApprove.classList.toggle('hidden', !canAct);
+  }
+  if (adminTopupReject) {
+    adminTopupReject.disabled = !canAct;
+    adminTopupReject.classList.toggle('hidden', !canAct);
+  }
   adminTopupOverlay.classList.remove('hidden');
   adminTopupSheet.classList.remove('hidden');
   requestAnimationFrame(() => adminTopupSheet.classList.add('show'));

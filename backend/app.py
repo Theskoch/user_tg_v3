@@ -128,54 +128,16 @@ def notify_admins_topup(ticket, user):
     if not admins:
         log_auth('topup_notify_admins', reason='no_admins', ticket_id=ticket.id)
         return
-    webapp_url = app.config.get('WEBAPP_URL')
-    if not webapp_url:
-        webapp_url = app.config.get('BASE_URL') if hasattr(app.config, 'BASE_URL') else None
-    if not webapp_url:
-        try:
-            webapp_url = request.host_url.rstrip('/') if request else None
-        except Exception:
-            webapp_url = None
-    if not webapp_url:
-        try:
-            host = os.environ.get('HOSTNAME') or 'localhost:5000'
-            webapp_url = f"https://{host}" if not host.startswith('http') else host
-        except Exception:
-            webapp_url = None
-    if webapp_url:
-        webapp_url = webapp_url.rstrip('/')
-        if webapp_url.startswith('http://') and 'localhost' not in webapp_url and '127.0.0.1' not in webapp_url:
-            webapp_url = webapp_url.replace('http://', 'https://', 1)
-    link = None
-    if webapp_url:
-        link = f"{webapp_url}/?admin=1&user_id={user.id}&ticket_id={ticket.id}"
-    tg_link = None
-    bot_username = app.config.get('BOT_USERNAME')
-    short_name = app.config.get('WEBAPP_SHORT_NAME')
-    if bot_username and short_name:
-        bot_username = str(bot_username).lstrip('@')
-        tg_link = f"https://t.me/{bot_username}/{short_name}?startapp=admin=1&user_id={user.id}&ticket_id={ticket.id}"
     text = (
         f"Пользователь {user.first_name or ''} @{user.username or ''} отправил перевод на сумму "
         f"{ticket.amount:.2f} ₽. Откройте приложение для подтверждения."
     )
-    if tg_link:
-        text += f"\n\nОткрыть в Telegram: {tg_link}"
-    elif link:
-        text += f"\n\nСсылка: {link}"
-
-    markup = None
-    if tg_link:
-        markup = types.InlineKeyboardMarkup()
-        markup.add(types.InlineKeyboardButton("Открыть в Telegram", web_app=types.WebAppInfo(tg_link)))
+    markup = build_topup_admin_markup(ticket.id)
 
     for admin in admins:
-        if markup:
-            send_bot_message_with_markup(admin.telegram_id, text, markup)
-        else:
-            send_bot_message(admin.telegram_id, text)
+        send_bot_message_with_markup(admin.telegram_id, text, markup)
     ticket.last_admin_notify_at = datetime.utcnow()
-    log_auth('topup_notify_admins', ticket_id=ticket.id, admins=[a.telegram_id for a in admins], link=link)
+    log_auth('topup_notify_admins', ticket_id=ticket.id, admins=[a.telegram_id for a in admins])
 
 @bot.callback_query_handler(func=lambda call: call.data and call.data.startswith('topup:'))
 def handle_topup_callback(call):
@@ -801,7 +763,23 @@ def admin_topup_history():
     except Exception:
         return jsonify({'error': 'Bad user id'}), 400
     items = TopUpTicket.query.filter_by(user_id=target_id).order_by(TopUpTicket.created_at.desc()).all()
-    return jsonify([t.to_dict() for t in items])
+    result = []
+    for t in items:
+        payload = t.to_dict()
+        if t.approved_by:
+            admin_user = User.query.get(t.approved_by)
+            if admin_user:
+                payload['approved_by_name'] = (
+                    f"{admin_user.first_name or ''} @{admin_user.username or ''}".strip()
+                )
+        if t.rejected_by:
+            admin_user = User.query.get(t.rejected_by)
+            if admin_user:
+                payload['rejected_by_name'] = (
+                    f"{admin_user.first_name or ''} @{admin_user.username or ''}".strip()
+                )
+        result.append(payload)
+    return jsonify(result)
 
 @app.route('/api/admin/topup/act', methods=['POST'])
 def admin_topup_act():
