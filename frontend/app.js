@@ -397,6 +397,10 @@ function applyTariffUi(userData) {
   const tariffName = userData?.tariff_name || '—';
   const paidUntil = userData?.tariff_paid_until ? new Date(userData.tariff_paid_until) : null;
   const paidUntilText = paidUntil ? paidUntil.toLocaleDateString('ru-RU') : '—';
+  const nextChargeAt = userData?.tariff_next_charge_at ? new Date(userData.tariff_next_charge_at) : null;
+  const tariffPrice = Number(userData?.tariff_price_rub || 0);
+  const balanceValue = Number(userData?.balance || 0);
+  const now = new Date();
 
   if (userTariffName) userTariffName.textContent = tariffName;
   if (userTariffUntil) userTariffUntil.textContent = paidUntil ? `до ${paidUntilText}` : '—';
@@ -404,8 +408,12 @@ function applyTariffUi(userData) {
   if (userTariffNameTopup) userTariffNameTopup.textContent = tariffName;
   if (userTariffUntilTopup) userTariffUntilTopup.textContent = paidUntil ? `до ${paidUntilText}` : '—';
 
-  if (paidUntil && userBalance) {
-    if (paidUntil < new Date()) {
+  if (userBalance) {
+    const isOverdue = nextChargeAt ? now >= nextChargeAt : paidUntil ? paidUntil < now : false;
+    const hasDebt = tariffPrice > 0 && balanceValue < tariffPrice;
+    if (isOverdue && hasDebt) {
+      userBalance.style.color = '#ff5d5d';
+    } else if (paidUntil && paidUntil < now) {
       userBalance.style.color = '#ff5d5d';
     } else {
       userBalance.style.color = '';

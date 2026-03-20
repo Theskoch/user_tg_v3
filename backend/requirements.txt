@@ -3,6 +3,7 @@ flask-sqlalchemy
 python-telegram-bot
 telebot
 flask-cors
+flask-limiter
 python-dotenv
 Werkzeug
 gunicorn
