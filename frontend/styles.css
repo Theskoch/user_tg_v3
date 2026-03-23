@@ -269,6 +269,7 @@ header {
     border: 1px solid rgba(255,255,255,0.1);
     backdrop-filter: blur(16px);
     box-shadow: 0 10px 26px rgba(0,0,0,0.35);
+    overflow: hidden;
 }
 
 .pay-methods {
@@ -494,6 +495,15 @@ select.sheet-text, input.sheet-text {
     min-height: 42px;
     width: 100%;
     max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+input[type="date"].sheet-text {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
 }
 
 select.sheet-text {
