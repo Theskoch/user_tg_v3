@@ -1,5 +1,5 @@
-import { apiGet, apiPost, API_URL } from './api.js';
-import { openBottomSheet, closeBottomSheet, copyText, showToast } from './ui.js';
+import { apiGet, apiPost, API_URL } from './api.js?v=3';
+import { openBottomSheet, closeBottomSheet, copyText, showToast } from './ui.js?v=3';
 
 // DOM refs
 const topupOverlay    = document.getElementById('topup-overlay');

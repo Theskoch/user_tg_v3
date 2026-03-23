@@ -1,18 +1,18 @@
-import { autoLogin, login, getTelegramUser } from './auth.js';
-import { renderConnections, fetchConnectionTypes } from './configs.js';
+import { autoLogin, login, getTelegramUser } from './auth.js?v=3';
+import { renderConnections, fetchConnectionTypes } from './configs.js?v=3';
 import {
   loadTopupHistory,
   loadTopupDetails,
   openTopupSheet
-} from './topup.js';
+} from './topup.js?v=3';
 import {
   loadAdminUsers,
   loadTariffs,
   updatePendingBadge,
   openAdminUser,
   autoOpenAdminFromQuery
-} from './admin.js';
-import { apiGet, API_URL } from './api.js';
+} from './admin.js?v=3';
+import { apiGet, API_URL } from './api.js?v=3';
 
 // ─── DOM refs ─────────────────────────────────────────────────────────────────
 const loginPage     = document.getElementById('login-page');

@@ -1,5 +1,5 @@
-import { apiGet, API_URL } from './api.js';
-import { setCurrentUser } from './state.js';
+import { apiGet, API_URL } from './api.js?v=3';
+import { setCurrentUser } from './state.js?v=3';
 
 export const tg = window.Telegram?.WebApp ?? null;
 if (tg) tg.ready();
@@ -86,9 +86,6 @@ export async function autoLogin() {
  * Login with a one-time code. Throws on failure.
  */
 export async function login(code) {
-  if (!getInitData() && !getTelegramUser() && !getStoredTelegramId()) {
-    throw new Error('Откройте приложение из Telegram');
-  }
   const data = await doAuth(code);
   if (!data.success) throw new Error(data.message || 'Неверный код доступа');
   const userData = await apiGet(`${API_URL}/user`);

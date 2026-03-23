@@ -1,9 +1,9 @@
-import { apiGet, apiPost, API_URL } from './api.js';
-import { openBottomSheet, closeBottomSheet, copyText, showToast } from './ui.js';
-import { setAdminSelected, setAdminUsers, setAdminTariffs, adminSelected, adminTariffs } from './state.js';
-import { handleConfigOpen, openConfigSheet } from './configs.js';
-import { renderTopupCard, formatTopupMethod } from './topup.js';
-import { startQr, stopQr } from './qr.js';
+import { apiGet, apiPost, API_URL } from './api.js?v=3';
+import { openBottomSheet, closeBottomSheet, copyText, showToast } from './ui.js?v=3';
+import { setAdminSelected, setAdminUsers, setAdminTariffs, adminSelected, adminTariffs } from './state.js?v=3';
+import { handleConfigOpen, openConfigSheet } from './configs.js?v=3';
+import { renderTopupCard, formatTopupMethod } from './topup.js?v=3';
+import { startQr, stopQr } from './qr.js?v=3';
 
 // DOM refs — admin panel
 const adminPage        = document.getElementById('admin-page');
