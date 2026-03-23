@@ -4,6 +4,8 @@ import { setCurrentUser } from './state.js';
 export const tg = window.Telegram?.WebApp ?? null;
 if (tg) tg.ready();
 
+// ─── Telegram data helpers ────────────────────────────────────────────────────
+
 export function getInitData() {
   return tg?.initData ?? '';
 }
@@ -12,10 +14,33 @@ export function getTelegramUser() {
   return tg?.initDataUnsafe?.user ?? null;
 }
 
+function getStoredTelegramId() {
+  try {
+    // New format
+    const id = localStorage.getItem('tg_id');
+    if (id) return id;
+    // Legacy format written by old app.js
+    const legacy = JSON.parse(localStorage.getItem('tg_user') || 'null');
+    return legacy?.id ? String(legacy.id) : null;
+  } catch { return null; }
+}
+
+export function saveStoredTelegramId(id) {
+  try {
+    if (id) {
+      localStorage.setItem('tg_id', String(id));
+    }
+  } catch {}
+}
+
+// ─── Core auth request ────────────────────────────────────────────────────────
+
 async function doAuth(code = '') {
+  const tgUser = getTelegramUser();
   const body = {
-    init_data: getInitData(),
-    telegram_user: getTelegramUser(),
+    init_data:         getInitData(),
+    telegram_user:     tgUser,
+    stored_telegram_id: tgUser ? null : getStoredTelegramId(),
     code
   };
   const r = await fetch(`${API_URL}/auth`, {
@@ -27,25 +52,29 @@ async function doAuth(code = '') {
   return r.json();
 }
 
+// ─── Public API ───────────────────────────────────────────────────────────────
+
 /**
  * Try to auto-login on page load.
- * 1. First checks if an existing server session is valid (fastest path).
- * 2. Falls back to authenticating with Telegram initData.
+ * 1. Check existing server session (fastest — no Telegram data needed).
+ * 2. Re-auth with whatever Telegram data is available.
  */
 export async function autoLogin() {
-  // Fast path: existing session cookie
+  // Fast path: valid session cookie
   try {
     const userData = await apiGet(`${API_URL}/user`);
     setCurrentUser(userData);
     return userData;
   } catch {}
 
-  // Slow path: re-authenticate with Telegram data
-  if (!getInitData() && !getTelegramUser()) return null;
+  // Nothing to identify the user
+  if (!getInitData() && !getTelegramUser() && !getStoredTelegramId()) return null;
+
   try {
     const data = await doAuth();
     if (!data.success) return null;
     const userData = await apiGet(`${API_URL}/user`);
+    if (userData.telegram_id) saveStoredTelegramId(userData.telegram_id);
     setCurrentUser(userData);
     return userData;
   } catch {
@@ -57,12 +86,13 @@ export async function autoLogin() {
  * Login with a one-time code. Throws on failure.
  */
 export async function login(code) {
-  if (!getInitData() && !getTelegramUser()) {
+  if (!getInitData() && !getTelegramUser() && !getStoredTelegramId()) {
     throw new Error('Откройте приложение из Telegram');
   }
   const data = await doAuth(code);
   if (!data.success) throw new Error(data.message || 'Неверный код доступа');
   const userData = await apiGet(`${API_URL}/user`);
+  if (userData.telegram_id) saveStoredTelegramId(userData.telegram_id);
   setCurrentUser(userData);
   return userData;
 }

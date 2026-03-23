@@ -445,20 +445,27 @@ loginBtn.addEventListener('click', async () => {
     }
     
     try {
-        // Prepare telegram user data
-        if (!tg || !tg.initDataUnsafe || !tg.initDataUnsafe.user) {
+        // Prefer live Telegram data, fall back to localStorage
+        const liveTgUser = tg?.initDataUnsafe?.user || null;
+        const storedTgUser = getStoredTelegramUser();
+        const telegramUser = liveTgUser
+            ? {
+                id: liveTgUser.id,
+                username: liveTgUser.username,
+                first_name: liveTgUser.first_name,
+                last_name: liveTgUser.last_name
+              }
+            : storedTgUser
+                ? { id: storedTgUser.id, username: storedTgUser.username,
+                    first_name: storedTgUser.first_name, last_name: storedTgUser.last_name }
+                : null;
+
+        if (!telegramUser) {
             errorMessage.textContent = 'Откройте приложение из Telegram';
             return;
         }
+        if (liveTgUser) saveTelegramUser(telegramUser);
 
-        const telegramUser = {
-            id: tg.initDataUnsafe.user.id,
-            username: tg.initDataUnsafe.user.username,
-            first_name: tg.initDataUnsafe.user.first_name,
-            last_name: tg.initDataUnsafe.user.last_name
-        };
-        saveTelegramUser(telegramUser);
-        
         // Send authentication request
         const response = await fetch(`${API_URL}/auth`, {
             method: 'POST',
@@ -468,7 +475,8 @@ loginBtn.addEventListener('click', async () => {
             credentials: 'include',
             body: JSON.stringify({
                 code: code,
-                telegram_user: telegramUser
+                telegram_user: telegramUser,
+                stored_telegram_id: !liveTgUser ? String(telegramUser.id) : null
             })
         });
 
