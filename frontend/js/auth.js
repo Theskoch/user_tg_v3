@@ -12,25 +12,38 @@ export function getTelegramUser() {
   return tg?.initDataUnsafe?.user ?? null;
 }
 
-async function doAuth(initData, code = '') {
+async function doAuth(code = '') {
+  const body = {
+    init_data: getInitData(),
+    telegram_user: getTelegramUser(),
+    code
+  };
   const r = await fetch(`${API_URL}/auth`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
-    body: JSON.stringify({ init_data: initData, code })
+    body: JSON.stringify(body)
   });
   return r.json();
 }
 
 /**
- * Try to auto-login using Telegram initData (called on page load).
- * Returns user data object on success, null otherwise.
+ * Try to auto-login on page load.
+ * 1. First checks if an existing server session is valid (fastest path).
+ * 2. Falls back to authenticating with Telegram initData.
  */
 export async function autoLogin() {
-  const initData = getInitData();
-  if (!initData) return null;
+  // Fast path: existing session cookie
   try {
-    const data = await doAuth(initData);
+    const userData = await apiGet(`${API_URL}/user`);
+    setCurrentUser(userData);
+    return userData;
+  } catch {}
+
+  // Slow path: re-authenticate with Telegram data
+  if (!getInitData() && !getTelegramUser()) return null;
+  try {
+    const data = await doAuth();
     if (!data.success) return null;
     const userData = await apiGet(`${API_URL}/user`);
     setCurrentUser(userData);
@@ -42,12 +55,12 @@ export async function autoLogin() {
 
 /**
  * Login with a one-time code. Throws on failure.
- * Returns user data object on success.
  */
 export async function login(code) {
-  const initData = getInitData();
-  if (!initData) throw new Error('Откройте приложение из Telegram');
-  const data = await doAuth(initData, code);
+  if (!getInitData() && !getTelegramUser()) {
+    throw new Error('Откройте приложение из Telegram');
+  }
+  const data = await doAuth(code);
   if (!data.success) throw new Error(data.message || 'Неверный код доступа');
   const userData = await apiGet(`${API_URL}/user`);
   setCurrentUser(userData);

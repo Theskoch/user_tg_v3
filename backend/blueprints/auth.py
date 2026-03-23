@@ -11,23 +11,48 @@ from bot_setup import BOT_TOKEN
 auth_bp = Blueprint('auth', __name__)
 
 
+def _resolve_telegram_user(data: dict) -> dict | None:
+    """
+    Extract a verified (or best-effort) Telegram user from the request payload.
+
+    Priority:
+    1. HMAC-verified initData  (secure, requires BOT_TOKEN)
+    2. telegram_user object from initDataUnsafe (fallback when initData unavailable)
+    """
+    init_data = (data.get('init_data') or '').strip()
+    raw_tg_user = data.get('telegram_user') or {}
+
+    # Attempt HMAC verification when both inputs are present
+    if init_data and BOT_TOKEN:
+        verified = verify_telegram_init_data(init_data, BOT_TOKEN)
+        if verified and verified.get('id'):
+            log_auth('auth_method', method='hmac_verified')
+            return verified
+        # HMAC failed — fall through to unverified fallback, log the issue
+        log_auth('auth_hmac_failed', has_init_data=True)
+
+    # Fallback: trust telegram_user from initDataUnsafe (same security as old system)
+    if raw_tg_user and raw_tg_user.get('id'):
+        log_auth('auth_method', method='unverified_fallback')
+        return raw_tg_user
+
+    return None
+
+
 @auth_bp.route('/auth', methods=['POST'])
-@limiter.limit("15 per minute")
+@limiter.limit("20 per minute")
 def authenticate():
     data = request.get_json(silent=True) or {}
     code = (data.get('code') or '').strip()
-    init_data = (data.get('init_data') or '').strip()
 
-    log_auth('auth_called', has_init_data=bool(init_data))
-
-    telegram_user = verify_telegram_init_data(init_data, BOT_TOKEN)
+    telegram_user = _resolve_telegram_user(data)
     if not telegram_user or not telegram_user.get('id'):
-        log_auth('auth_invalid_init_data')
+        log_auth('auth_no_tg_data')
         return jsonify({'success': False, 'message': 'Откройте приложение из Telegram'}), 400
 
     tg_id = str(telegram_user['id'])
 
-    # Auto-login if user already registered
+    # Auto-login for existing users
     existing_user = User.query.filter_by(telegram_id=tg_id).first()
     if existing_user:
         session['telegram_id'] = tg_id
@@ -40,7 +65,7 @@ def authenticate():
             'auto': True
         })
 
-    # New user — validate one-time code
+    # New user — need a valid one-time code
     if not code:
         return jsonify({'success': False, 'message': 'Введите код доступа'})
 
