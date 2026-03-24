@@ -298,6 +298,26 @@
         </div>
     </div>
 
-    <script type="module" src="js/main.js?v=5"></script>
+    <div id="delete-user-overlay" class="sheet-overlay hidden"></div>
+    <div id="delete-user-sheet" class="sheet hidden">
+        <div class="sheet-handle"></div>
+        <h4 style="color:#ff5d5d;">⚠ Удаление пользователя</h4>
+        <p class="conn-sub" style="margin:8px 0 16px; line-height:1.5;">
+            Внимание! Пользователь будет удалён <strong style="color:#fff;">безвозвратно</strong>
+            вместе со всеми его подключениями и историей пополнений.
+            Это действие невозможно отменить.
+        </p>
+        <div id="delete-countdown-wrap" style="text-align:center; margin-bottom:14px;">
+            <span class="conn-sub">Кнопка станет активной через </span>
+            <span id="delete-countdown" style="color:#ff5d5d; font-weight:700;">10</span>
+            <span class="conn-sub"> сек</span>
+        </div>
+        <div style="display:grid; gap:10px;">
+            <button id="delete-user-confirm" class="btn" style="background:#ff5d5d;" disabled>Удалить</button>
+            <button id="delete-user-cancel" class="btn ghost">Отмена</button>
+        </div>
+    </div>
+
+    <script type="module" src="js/main.js?v=6"></script>
 </body>
 </html>

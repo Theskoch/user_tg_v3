@@ -1,9 +1,9 @@
-import { apiGet, apiPost, API_URL } from './api.js?v=5';
-import { openBottomSheet, closeBottomSheet, copyText, showToast } from './ui.js?v=5';
-import { setAdminSelected, setAdminUsers, setAdminTariffs, adminSelected, adminTariffs } from './state.js?v=5';
-import { handleConfigOpen, openConfigSheet } from './configs.js?v=5';
-import { renderTopupCard, formatTopupMethod } from './topup.js?v=5';
-import { startQr, stopQr } from './qr.js?v=5';
+import { apiGet, apiPost, API_URL } from './api.js?v=6';
+import { openBottomSheet, closeBottomSheet, copyText, showToast } from './ui.js?v=6';
+import { setAdminSelected, setAdminUsers, setAdminTariffs, adminSelected, adminTariffs } from './state.js?v=6';
+import { handleConfigOpen, openConfigSheet } from './configs.js?v=6';
+import { renderTopupCard, formatTopupMethod } from './topup.js?v=6';
+import { startQr, stopQr } from './qr.js?v=6';
 
 // DOM refs — admin panel
 const adminPage        = document.getElementById('admin-page');
@@ -415,8 +415,63 @@ addSave?.addEventListener('click', async () => {
   await loadAdminConfigs();
 });
 
-adminUserDelete?.addEventListener('click', async () => {
+// ─── Delete-user confirmation sheet ──────────────────────────────────────────
+
+const deleteUserOverlay  = document.getElementById('delete-user-overlay');
+const deleteUserSheet    = document.getElementById('delete-user-sheet');
+const deleteUserConfirm  = document.getElementById('delete-user-confirm');
+const deleteUserCancel   = document.getElementById('delete-user-cancel');
+const deleteCountdown    = document.getElementById('delete-countdown');
+const deleteCountdownWrap = document.getElementById('delete-countdown-wrap');
+
+let _deleteTimer = null;
+
+function openDeleteSheet() {
+  deleteUserOverlay?.classList.remove('hidden');
+  deleteUserSheet?.classList.remove('hidden');
+  requestAnimationFrame(() => deleteUserSheet?.classList.add('show'));
+
+  // reset state
+  let seconds = 10;
+  if (deleteCountdown) deleteCountdown.textContent = seconds;
+  if (deleteCountdownWrap) deleteCountdownWrap.style.display = '';
+  if (deleteUserConfirm) {
+    deleteUserConfirm.disabled = true;
+    deleteUserConfirm.textContent = 'Удалить';
+  }
+
+  clearInterval(_deleteTimer);
+  _deleteTimer = setInterval(() => {
+    seconds -= 1;
+    if (deleteCountdown) deleteCountdown.textContent = seconds;
+    if (seconds <= 0) {
+      clearInterval(_deleteTimer);
+      if (deleteCountdownWrap) deleteCountdownWrap.style.display = 'none';
+      if (deleteUserConfirm) deleteUserConfirm.disabled = false;
+    }
+  }, 1000);
+}
+
+function closeDeleteSheet() {
+  clearInterval(_deleteTimer);
+  deleteUserSheet?.classList.remove('show');
+  setTimeout(() => {
+    deleteUserOverlay?.classList.add('hidden');
+    deleteUserSheet?.classList.add('hidden');
+  }, 250);
+}
+
+adminUserDelete?.addEventListener('click', () => {
   if (!adminSelected) return;
+  openDeleteSheet();
+});
+
+deleteUserCancel?.addEventListener('click', closeDeleteSheet);
+deleteUserOverlay?.addEventListener('click', closeDeleteSheet);
+
+deleteUserConfirm?.addEventListener('click', async () => {
+  if (!adminSelected) return;
+  closeDeleteSheet();
   await apiPost(`${API_URL}/api/admin/user/delete`, { target_user_id: adminSelected.id });
   setAdminSelected(null);
   adminUserPage?.classList.add('hidden');
