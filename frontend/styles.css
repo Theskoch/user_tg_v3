@@ -64,8 +64,8 @@ body::-webkit-scrollbar {
 /* ─── Pending-payment badge ─────────────────────────────────────────────── */
 .pending-badge {
     position: absolute;
-    top: -7px;
-    right: -7px;
+    top: -8px;
+    right: 8px;          /* sits ON the button top-right, like phone app badge */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -78,9 +78,16 @@ body::-webkit-scrollbar {
     height: 20px;
     padding: 0 5px;
     border-radius: 999px;
-    box-shadow: 0 2px 8px rgba(65,195,111,0.55);
-    border: 2px solid rgba(15,17,22,0.9);
-    z-index: 1;
+    box-shadow: 0 2px 8px rgba(65,195,111,0.6);
+    border: 2px solid #0f1116;
+    z-index: 10;
+    pointer-events: none;
+}
+
+/* Hamburger icon: badge at the very top-right corner of the icon */
+.menu-icon .pending-badge {
+    top: -8px;
+    right: -8px;
 }
 
 #admin-btn {

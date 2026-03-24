@@ -1,0 +1,280 @@
+#!/usr/bin/env python3
+"""
+Красивая серверная консоль — запускай прямо на сервере:
+    cd /path/to/backend
+    python server_console.py
+
+Зависимости (уже есть в проекте или ставятся):
+    pip install rich psutil
+"""
+
+import os
+import sys
+import time
+import sqlite3
+from datetime import datetime
+from collections import deque
+
+import psutil
+from rich import box
+from rich.align import Align
+from rich.columns import Columns
+from rich.console import Console
+from rich.layout import Layout
+from rich.live import Live
+from rich.panel import Panel
+from rich.progress import BarColumn, Progress, TextColumn
+from rich.table import Table
+from rich.text import Text
+
+# ── Paths ─────────────────────────────────────────────────────────────────────
+BASE_DIR  = os.path.dirname(os.path.abspath(__file__))
+DB_PATH   = os.path.join(BASE_DIR, 'instance', 'users.db')
+LOG_PATH  = os.path.join(BASE_DIR, 'auth_debug.log')
+REFRESH   = 5   # seconds between updates
+LOG_LINES = 18  # lines shown in the log panel
+
+console = Console()
+
+
+# ── Database helpers ──────────────────────────────────────────────────────────
+
+def db_query(sql, params=()):
+    """Run a read-only SQLite query, return list of Row objects."""
+    try:
+        conn = sqlite3.connect(f'file:{DB_PATH}?mode=ro', uri=True)
+        conn.row_factory = sqlite3.Row
+        cur = conn.execute(sql, params)
+        rows = cur.fetchall()
+        conn.close()
+        return rows
+    except Exception:
+        return []
+
+
+def get_app_stats():
+    users   = db_query("SELECT COUNT(*) AS n FROM user")[0]['n']       if db_query("SELECT COUNT(*) AS n FROM user")   else 0
+    configs = db_query("SELECT COUNT(*) AS n FROM config_item")[0]['n'] if db_query("SELECT COUNT(*) AS n FROM config_item") else 0
+    pending = db_query("SELECT COUNT(*) AS n FROM top_up_ticket WHERE status='pending'")[0]['n'] \
+              if db_query("SELECT COUNT(*) AS n FROM top_up_ticket WHERE status='pending'") else 0
+    return users, configs, pending
+
+
+def get_recent_topups(n=8):
+    return db_query(
+        """
+        SELECT t.amount, t.status, t.created_at,
+               u.first_name, u.username
+        FROM   top_up_ticket t
+        LEFT   JOIN user u ON u.id = t.user_id
+        ORDER  BY t.created_at DESC
+        LIMIT  ?
+        """,
+        (n,)
+    )
+
+
+# ── Log tail ──────────────────────────────────────────────────────────────────
+
+_log_buf: deque = deque(maxlen=LOG_LINES)
+
+def refresh_log():
+    try:
+        with open(LOG_PATH, 'r', encoding='utf-8', errors='replace') as f:
+            for line in f:
+                pass   # fast-forward to end on first open
+        # tail last N lines
+        with open(LOG_PATH, 'r', encoding='utf-8', errors='replace') as f:
+            lines = f.readlines()
+        _log_buf.clear()
+        _log_buf.extend(lines[-LOG_LINES:])
+    except FileNotFoundError:
+        _log_buf.append("(лог-файл не найден)\n")
+    except Exception as e:
+        _log_buf.append(f"(ошибка чтения лога: {e})\n")
+
+
+# ── Rendering helpers ─────────────────────────────────────────────────────────
+
+def colour_for(pct: float) -> str:
+    if pct < 60:  return "green"
+    if pct < 85:  return "yellow"
+    return "red"
+
+
+def fmt_uptime(sec: int) -> str:
+    d, rem = divmod(sec, 86400)
+    h, rem = divmod(rem, 3600)
+    m      = rem // 60
+    if d:  return f"{d}д {h}ч {m}м"
+    if h:  return f"{h}ч {m}м"
+    return f"{m}м"
+
+
+def make_metrics_panel() -> Panel:
+    cpu   = psutil.cpu_percent(interval=0)
+    ram   = psutil.virtual_memory()
+    disk  = psutil.disk_usage('/')
+    uptime = int(time.time() - psutil.boot_time())
+
+    prog = Progress(
+        TextColumn("{task.description}", style="bold white", justify="right"),
+        BarColumn(bar_width=28, style="green", complete_style="green"),
+        TextColumn("{task.percentage:>5.1f}%", style="bold"),
+        expand=False,
+    )
+    def add(label, pct):
+        c = colour_for(pct)
+        t = prog.add_task(label, total=100, completed=pct)
+        prog.columns[1].style         = c   # type: ignore[attr-defined]
+        prog.columns[1].complete_style = c  # type: ignore[attr-defined]
+
+    cpu_task  = prog.add_task("[cyan]CPU      ", total=100, completed=cpu)
+    ram_task  = prog.add_task(f"[cyan]RAM  {ram.used//1024//1024:>5}M/{ram.total//1024//1024}M", total=100, completed=ram.percent)
+    disk_task = prog.add_task(f"[cyan]Диск {disk.used//1024**3:>4.0f}G/{disk.total//1024**3:.0f}G", total=100, completed=disk.percent)
+
+    table = Table.grid(padding=(0, 2))
+    table.add_column()
+    table.add_column()
+    table.add_row(prog, Text(f"⏱  Uptime: {fmt_uptime(uptime)}", style="dim"))
+
+    return Panel(table, title="[bold]🖥  Сервер", border_style="blue", box=box.ROUNDED)
+
+
+def make_app_stats_panel(users, configs, pending) -> Panel:
+    t = Table.grid(expand=True, padding=(0, 3))
+    t.add_column(justify="center")
+    t.add_column(justify="center")
+    t.add_column(justify="center")
+
+    t.add_row(
+        Text(str(users),   style="bold bright_white", justify="center"),
+        Text(str(configs), style="bold bright_white", justify="center"),
+        Text(str(pending), style="bold " + ("yellow" if pending else "bright_white"), justify="center"),
+    )
+    t.add_row(
+        Text("Пользователи", style="dim", justify="center"),
+        Text("Конфиги",      style="dim", justify="center"),
+        Text("Ожидают",      style="dim " + ("yellow" if pending else ""), justify="center"),
+    )
+
+    return Panel(t, title="[bold]📊  Приложение", border_style="blue", box=box.ROUNDED)
+
+
+def make_topups_panel(rows) -> Panel:
+    t = Table(box=box.SIMPLE_HEAVY, show_header=True, header_style="bold dim",
+              expand=True, show_lines=False)
+    t.add_column("Сумма",    style="bold", width=10)
+    t.add_column("Статус",   width=10)
+    t.add_column("Кто",      style="dim",  min_width=14)
+    t.add_column("Когда",    style="dim",  width=17, justify="right")
+
+    status_style = {"pending": "yellow", "approved": "green", "rejected": "red"}
+    status_label = {"pending": "⏳ ожидает", "approved": "✅ принят", "rejected": "❌ отклонён"}
+
+    for r in rows:
+        st = r["status"] or "pending"
+        user = f"{r['first_name'] or ''} @{r['username'] or ''}".strip() or "—"
+        ts = r["created_at"] or ""
+        try:
+            dt = datetime.fromisoformat(ts.replace("Z",""))
+            ts = dt.strftime("%d.%m  %H:%M")
+        except Exception:
+            ts = ts[:16]
+        t.add_row(
+            f"{float(r['amount']):.2f} ₽",
+            Text(status_label.get(st, st), style=status_style.get(st, "")),
+            user,
+            ts,
+        )
+
+    if not rows:
+        t.add_row("—", "—", "—", "—")
+
+    return Panel(t, title="[bold]💳  Последние пополнения", border_style="blue", box=box.ROUNDED)
+
+
+def make_log_panel() -> Panel:
+    text = Text()
+    for raw_line in _log_buf:
+        line = raw_line.rstrip("\n")
+        lower = line.lower()
+        if "error" in lower or "fail" in lower or "exception" in lower:
+            style = "red"
+        elif "warn" in lower or "hmac_failed" in lower:
+            style = "yellow"
+        else:
+            style = "dim green"
+        text.append(line + "\n", style=style)
+
+    now = datetime.utcnow().strftime("%H:%M:%S UTC")
+    return Panel(
+        text,
+        title=f"[bold]📜  Лог  [dim](обновлено {now})",
+        border_style="blue",
+        box=box.ROUNDED,
+    )
+
+
+def make_header() -> Panel:
+    grid = Table.grid(expand=True)
+    grid.add_column()
+    grid.add_column(justify="right")
+    grid.add_row(
+        Text("VPN Admin Console", style="bold bright_white"),
+        Text(datetime.now().strftime("%Y-%m-%d  %H:%M:%S"), style="dim"),
+    )
+    return Panel(grid, style="on dark_blue", box=box.ROUNDED)
+
+
+# ── Main loop ─────────────────────────────────────────────────────────────────
+
+def build_layout() -> Layout:
+    layout = Layout()
+    layout.split_column(
+        Layout(name="header",  size=3),
+        Layout(name="top",     size=10),
+        Layout(name="middle",  size=14),
+        Layout(name="log"),
+    )
+    layout["top"].split_row(
+        Layout(name="metrics", ratio=3),
+        Layout(name="stats",   ratio=2),
+    )
+    return layout
+
+
+def main():
+    refresh_log()
+    layout = build_layout()
+    psutil.cpu_percent(interval=None)   # prime the measurement
+
+    with Live(layout, refresh_per_second=1, screen=True) as live:
+        while True:
+            try:
+                cpu_now = psutil.cpu_percent(interval=0)
+                users, configs, pending = get_app_stats()
+                topups = get_recent_topups()
+                refresh_log()
+
+                layout["header"].update(make_header())
+                layout["metrics"].update(make_metrics_panel())
+                layout["stats"].update(make_app_stats_panel(users, configs, pending))
+                layout["middle"].update(make_topups_panel(topups))
+                layout["log"].update(make_log_panel())
+
+            except KeyboardInterrupt:
+                break
+            except Exception as e:
+                layout["header"].update(Panel(f"[red]Ошибка: {e}", box=box.ROUNDED))
+
+            time.sleep(REFRESH)
+
+
+if __name__ == "__main__":
+    try:
+        import rich
+    except ImportError:
+        print("Установи rich:  pip install rich psutil")
+        sys.exit(1)
+    main()
