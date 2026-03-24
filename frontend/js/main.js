@@ -1,18 +1,18 @@
-import { autoLogin, login, getTelegramUser } from './auth.js?v=3';
-import { renderConnections, fetchConnectionTypes } from './configs.js?v=3';
+import { autoLogin, login, getTelegramUser } from './auth.js?v=4';
+import { renderConnections, fetchConnectionTypes } from './configs.js?v=4';
 import {
   loadTopupHistory,
   loadTopupDetails,
   openTopupSheet
-} from './topup.js?v=3';
+} from './topup.js?v=4';
 import {
   loadAdminUsers,
   loadTariffs,
   updatePendingBadge,
   openAdminUser,
   autoOpenAdminFromQuery
-} from './admin.js?v=3';
-import { apiGet, API_URL } from './api.js?v=3';
+} from './admin.js?v=4';
+import { apiGet, API_URL } from './api.js?v=4';
 
 // ─── DOM refs ─────────────────────────────────────────────────────────────────
 const loginPage     = document.getElementById('login-page');
@@ -82,6 +82,7 @@ async function refreshUserBalance() {
     if (userBalanceTopup) userBalanceTopup.textContent = `${balance} ₽`;
     applyTariffUi(userData);
   } catch {}
+  try { await renderConnections(); } catch {}
 }
 
 function onLoggedIn(userData) {
@@ -156,11 +157,6 @@ replenishBtn?.addEventListener('click', async () => {
   await loadTopupHistory();
 });
 
-userBalance?.addEventListener('click', async () => {
-  userPage?.classList.add('hidden');
-  topupPage?.classList.remove('hidden');
-  await loadTopupHistory();
-});
 
 topupBack?.addEventListener('click', () => {
   topupPage?.classList.add('hidden');
