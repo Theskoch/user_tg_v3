@@ -63,32 +63,33 @@ body::-webkit-scrollbar {
 
 /* ─── Pending-payment badge ─────────────────────────────────────────────── */
 .pending-badge {
-    display: inline-flex;
+    position: absolute;
+    top: -7px;
+    right: -7px;
+    display: flex;
     align-items: center;
     justify-content: center;
-    background: #ff5d5d;
+    background: linear-gradient(135deg, #41c36f, #2ea855);
     color: #fff;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 700;
     line-height: 1;
-    min-width: 18px;
-    height: 18px;
+    min-width: 20px;
+    height: 20px;
     padding: 0 5px;
     border-radius: 999px;
-    box-shadow: 0 2px 6px rgba(255,93,93,0.55);
-    vertical-align: middle;
-    margin-left: 6px;
+    box-shadow: 0 2px 8px rgba(65,195,111,0.55);
+    border: 2px solid rgba(15,17,22,0.9);
+    z-index: 1;
 }
 
-/* badge on the hamburger icon — absolute positioning */
+#admin-btn {
+    position: relative;
+    overflow: visible;
+}
+
 .menu-icon {
     position: relative;
-}
-.menu-icon .pending-badge {
-    position: absolute;
-    top: -6px;
-    right: -8px;
-    margin: 0;
 }
 
 #login-btn, #replenish-btn, #download-btn, #admin-btn {
