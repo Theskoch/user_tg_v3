@@ -34,13 +34,14 @@
                 <div class="bar"></div>
                 <div class="bar"></div>
                 <div class="bar"></div>
+                <span class="pending-badge hidden" id="menu-pending-badge"></span>
             </div>
         </header>
 
         <div id="side-menu" class="side-menu hidden">
             <button id="replenish-btn">Пополнить</button>
             <button id="download-btn">Скачать приложение</button>
-            <button id="admin-btn" class="hidden">Администратор</button>
+            <button id="admin-btn" class="hidden">Администратор <span class="pending-badge hidden" id="admin-btn-badge"></span></button>
         </div>
 
         <div class="connections-list">
@@ -297,6 +298,6 @@
         </div>
     </div>
 
-    <script type="module" src="js/main.js?v=4"></script>
+    <script type="module" src="js/main.js?v=5"></script>
 </body>
 </html>

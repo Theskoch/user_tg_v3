@@ -1,18 +1,20 @@
-import { autoLogin, login, getTelegramUser } from './auth.js?v=4';
-import { renderConnections, fetchConnectionTypes } from './configs.js?v=4';
+import { autoLogin, login, getTelegramUser } from './auth.js?v=5';
+import { renderConnections, fetchConnectionTypes } from './configs.js?v=5';
 import {
   loadTopupHistory,
   loadTopupDetails,
   openTopupSheet
-} from './topup.js?v=4';
+} from './topup.js?v=5';
 import {
   loadAdminUsers,
   loadTariffs,
   updatePendingBadge,
   openAdminUser,
   autoOpenAdminFromQuery
-} from './admin.js?v=4';
-import { apiGet, API_URL } from './api.js?v=4';
+} from './admin.js?v=5';
+import { apiGet, API_URL } from './api.js?v=5';
+
+let _isAdmin = false;
 
 // ─── DOM refs ─────────────────────────────────────────────────────────────────
 const loginPage     = document.getElementById('login-page');
@@ -83,6 +85,7 @@ async function refreshUserBalance() {
     applyTariffUi(userData);
   } catch {}
   try { await renderConnections(); } catch {}
+  if (_isAdmin) try { await updatePendingBadge(); } catch {}
 }
 
 function onLoggedIn(userData) {
@@ -98,7 +101,10 @@ function onLoggedIn(userData) {
 
   applyTariffUi(userData);
 
-  if (userData?.is_admin) adminBtn?.classList.remove('hidden');
+  if (userData?.is_admin) {
+    adminBtn?.classList.remove('hidden');
+    _isAdmin = true;
+  }
 
   setInterval(refreshUserBalance, 20000);
 }

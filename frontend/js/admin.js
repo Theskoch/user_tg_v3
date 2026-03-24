@@ -1,9 +1,9 @@
-import { apiGet, apiPost, API_URL } from './api.js?v=3';
-import { openBottomSheet, closeBottomSheet, copyText, showToast } from './ui.js?v=3';
-import { setAdminSelected, setAdminUsers, setAdminTariffs, adminSelected, adminTariffs } from './state.js?v=3';
-import { handleConfigOpen, openConfigSheet } from './configs.js?v=3';
-import { renderTopupCard, formatTopupMethod } from './topup.js?v=3';
-import { startQr, stopQr } from './qr.js?v=3';
+import { apiGet, apiPost, API_URL } from './api.js?v=5';
+import { openBottomSheet, closeBottomSheet, copyText, showToast } from './ui.js?v=5';
+import { setAdminSelected, setAdminUsers, setAdminTariffs, adminSelected, adminTariffs } from './state.js?v=5';
+import { handleConfigOpen, openConfigSheet } from './configs.js?v=5';
+import { renderTopupCard, formatTopupMethod } from './topup.js?v=5';
+import { startQr, stopQr } from './qr.js?v=5';
 
 // DOM refs — admin panel
 const adminPage        = document.getElementById('admin-page');
@@ -113,10 +113,27 @@ export async function loadTariffs() {
 }
 
 export async function updatePendingBadge() {
-  if (!adminPendingCard) return;
   try {
     const items = await apiGet(`${API_URL}/api/admin/topup/pending`);
-    adminPendingCard.classList.toggle('hidden', !items.length);
+    const count = items.length;
+
+    // Card inside admin panel
+    if (adminPendingCard) adminPendingCard.classList.toggle('hidden', !count);
+
+    // Badge on the "Администратор" button in side menu
+    const adminBtnBadge   = document.getElementById('admin-btn-badge');
+    const menuPendingBadge = document.getElementById('menu-pending-badge');
+    const label = count > 99 ? '99+' : String(count);
+    [adminBtnBadge, menuPendingBadge].forEach(el => {
+      if (!el) return;
+      el.textContent = label;
+      el.classList.toggle('hidden', !count);
+    });
+
+    // Telegram Mini App badge on app icon (supported in newer clients)
+    try {
+      if (window.Telegram?.WebApp?.setBadge) window.Telegram.WebApp.setBadge(count);
+    } catch {}
   } catch {
     adminPendingCard?.classList.add('hidden');
   }
