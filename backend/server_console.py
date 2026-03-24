@@ -29,12 +29,49 @@ from rich.text import Text
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 BASE_DIR  = os.path.dirname(os.path.abspath(__file__))
-DB_PATH   = os.path.join(BASE_DIR, 'instance', 'users.db')
 LOG_PATH  = os.path.join(BASE_DIR, 'auth_debug.log')
 REFRESH   = 5   # seconds between updates
 LOG_LINES = 18  # lines shown in the log panel
 
 console = Console()
+
+
+def _resolve_db_path() -> str:
+    """Find the SQLite database file.
+
+    Priority:
+    1. DATABASE_URL env var (loaded from .env if present)
+    2. backend/instance/users.db  (Flask default instance folder)
+    3. backend/users.db           (flat layout)
+    """
+    # Try to load .env
+    env_file = os.path.join(BASE_DIR, '.env')
+    if os.path.exists(env_file):
+        with open(env_file) as f:
+            for line in f:
+                line = line.strip()
+                if line.startswith('DATABASE_URL='):
+                    val = line.split('=', 1)[1].strip().strip('"').strip("'")
+                    # strip sqlite:/// prefix
+                    if val.startswith('sqlite:///'):
+                        val = val[len('sqlite:///'):]
+                    if not os.path.isabs(val):
+                        val = os.path.join(BASE_DIR, val)
+                    if os.path.exists(val):
+                        return val
+
+    for candidate in [
+        os.path.join(BASE_DIR, 'instance', 'users.db'),
+        os.path.join(BASE_DIR, 'users.db'),
+    ]:
+        if os.path.exists(candidate):
+            return candidate
+
+    # Return default even if not found — db_query will surface the error
+    return os.path.join(BASE_DIR, 'instance', 'users.db')
+
+
+DB_PATH = _resolve_db_path()
 
 
 # ── Database helpers ──────────────────────────────────────────────────────────
@@ -52,11 +89,20 @@ def db_query(sql, params=()):
         return []
 
 
+def _one(sql, params=()):
+    """Return the integer value of the first column of the first row."""
+    rows = db_query(sql, params)
+    return rows[0][0] if rows else 0
+
+
 def get_app_stats():
-    users   = db_query("SELECT COUNT(*) AS n FROM user")[0]['n']       if db_query("SELECT COUNT(*) AS n FROM user")   else 0
-    configs = db_query("SELECT COUNT(*) AS n FROM config_item")[0]['n'] if db_query("SELECT COUNT(*) AS n FROM config_item") else 0
-    pending = db_query("SELECT COUNT(*) AS n FROM top_up_ticket WHERE status='pending'")[0]['n'] \
-              if db_query("SELECT COUNT(*) AS n FROM top_up_ticket WHERE status='pending'") else 0
+    # Table names from db.py __tablename__ attributes:
+    #   User        → users
+    #   ConfigItem  → configs
+    #   TopUpTicket → topup_tickets
+    users   = _one("SELECT COUNT(*) FROM users")
+    configs = _one("SELECT COUNT(*) FROM configs")
+    pending = _one("SELECT COUNT(*) FROM topup_tickets WHERE status='pending'")
     return users, configs, pending
 
 
@@ -65,8 +111,8 @@ def get_recent_topups(n=8):
         """
         SELECT t.amount, t.status, t.created_at,
                u.first_name, u.username
-        FROM   top_up_ticket t
-        LEFT   JOIN user u ON u.id = t.user_id
+        FROM   topup_tickets t
+        LEFT   JOIN users u ON u.id = t.user_id
         ORDER  BY t.created_at DESC
         LIMIT  ?
         """,
@@ -277,4 +323,15 @@ if __name__ == "__main__":
     except ImportError:
         print("Установи rich:  pip install rich psutil")
         sys.exit(1)
+
+    # Show resolved paths before entering full-screen mode
+    db_ok  = "✅" if os.path.exists(DB_PATH)  else "❌ НЕ НАЙДЕН"
+    log_ok = "✅" if os.path.exists(LOG_PATH) else "⚠️  не найден (логи пустые)"
+    print(f"DB  : {DB_PATH}  {db_ok}")
+    print(f"LOG : {LOG_PATH}  {log_ok}")
+    if not os.path.exists(DB_PATH):
+        print("\nБД не найдена. Укажи путь вручную:")
+        print("  DATABASE_URL=sqlite:////абсолютный/путь/users.db python server_console.py")
+        sys.exit(1)
+    time.sleep(1)
     main()
