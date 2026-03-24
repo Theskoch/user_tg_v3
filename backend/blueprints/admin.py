@@ -1,11 +1,13 @@
 import os
 import json
+import time
+import psutil
 from datetime import datetime
 
 from flask import Blueprint, request, jsonify
 
 from db import db, User, ConfigItem, TopUpTicket
-from utils import admin_required, apply_topup_action, add_months
+from utils import admin_required, apply_topup_action, add_months, LOG_PATH
 
 admin_bp = Blueprint('admin', __name__)
 
@@ -230,6 +232,65 @@ def admin_topup_history():
                 payload['rejected_by_name'] = f"{a.first_name or ''} @{a.username or ''}".strip()
         result.append(payload)
     return jsonify(result)
+
+
+@admin_bp.route('/api/admin/console/stats', methods=['GET'])
+def console_stats():
+    if not admin_required():
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    cpu = psutil.cpu_percent(interval=0.3)
+    ram = psutil.virtual_memory()
+    disk = psutil.disk_usage('/')
+    uptime_sec = int(time.time() - psutil.boot_time())
+
+    users_total   = User.query.count()
+    configs_total = ConfigItem.query.count()
+    pending_count = TopUpTicket.query.filter_by(status='pending').count()
+    recent_topups = (
+        TopUpTicket.query
+        .order_by(TopUpTicket.created_at.desc())
+        .limit(10).all()
+    )
+    topup_list = []
+    for t in recent_topups:
+        u = User.query.get(t.user_id)
+        topup_list.append({
+            **t.to_dict(),
+            'user_name': f"{u.first_name or ''} @{u.username or ''}".strip() if u else '—',
+        })
+
+    return jsonify({
+        'server': {
+            'cpu_percent':   round(cpu, 1),
+            'ram_percent':   round(ram.percent, 1),
+            'ram_used_mb':   round(ram.used / 1024 / 1024),
+            'ram_total_mb':  round(ram.total / 1024 / 1024),
+            'disk_percent':  round(disk.percent, 1),
+            'disk_used_gb':  round(disk.used / 1024 / 1024 / 1024, 1),
+            'disk_total_gb': round(disk.total / 1024 / 1024 / 1024, 1),
+            'uptime_sec':    uptime_sec,
+        },
+        'app': {
+            'users_total':   users_total,
+            'configs_total': configs_total,
+            'pending_count': pending_count,
+        },
+        'recent_topups': topup_list,
+    })
+
+
+@admin_bp.route('/api/admin/console/logs', methods=['GET'])
+def console_logs():
+    if not admin_required():
+        return jsonify({'error': 'Unauthorized'}), 403
+    lines = []
+    try:
+        with open(LOG_PATH, 'r', encoding='utf-8', errors='replace') as f:
+            lines = f.readlines()[-80:]
+    except FileNotFoundError:
+        pass
+    return jsonify({'lines': [l.rstrip('\n') for l in lines]})
 
 
 @admin_bp.route('/api/admin/topup/act', methods=['POST'])

@@ -616,3 +616,160 @@ select.sheet-text:focus {
     box-shadow: 0 10px 24px rgba(0,0,0,0.35);
     backdrop-filter: blur(14px);
 }
+/* ─── Console page ─────────────────────────────────────────────────────────── */
+.console-metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}
+
+.console-metric-card,
+.console-stat-card {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 14px;
+    padding: 14px;
+    backdrop-filter: blur(14px);
+}
+
+.metric-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: rgba(255,255,255,0.45);
+    margin-bottom: 4px;
+}
+
+.metric-value {
+    font-size: 22px;
+    font-weight: 700;
+    color: #eef1f6;
+    line-height: 1.15;
+}
+
+.console-stat-card .metric-value {
+    font-size: 26px;
+    text-align: center;
+}
+.console-stat-card .metric-label {
+    text-align: center;
+}
+
+.metric-bar-wrap {
+    margin-top: 8px;
+    height: 4px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.1);
+    overflow: hidden;
+}
+
+.metric-bar {
+    height: 100%;
+    border-radius: 999px;
+    width: 0%;
+    transition: width 0.6s ease, background 0.4s;
+}
+
+/* colour thresholds driven by JS via data-level attribute */
+.metric-bar[data-level="ok"]   { background: linear-gradient(90deg,#41c36f,#2ea855); }
+.metric-bar[data-level="warn"] { background: linear-gradient(90deg,#f5a623,#e08800); }
+.metric-bar[data-level="crit"] { background: linear-gradient(90deg,#ff5d5d,#e03030); }
+
+/* Topup list inside console */
+.console-topup-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.console-topup-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.04);
+    font-size: 12px;
+}
+
+.console-topup-row .topup-status {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 999px;
+    flex-shrink: 0;
+}
+.topup-status.pending  { background: rgba(245,166,35,0.2);  color:#f5a623; }
+.topup-status.approved { background: rgba(65,195,111,0.2); color:#41c36f; }
+.topup-status.rejected { background: rgba(255,93,93,0.2);  color:#ff5d5d; }
+
+.console-topup-row .topup-amount {
+    font-weight: 700;
+    color: #eef1f6;
+    flex-shrink: 0;
+}
+.console-topup-row .topup-user {
+    color: rgba(255,255,255,0.55);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+}
+.console-topup-row .topup-time {
+    color: rgba(255,255,255,0.3);
+    font-size: 10px;
+    flex-shrink: 0;
+}
+
+/* Log area */
+.console-log-card {
+    background: rgba(10,12,16,0.85);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+.console-log-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: rgba(255,255,255,0.4);
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+
+.console-log-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: #41c36f;
+    box-shadow: 0 0 6px #41c36f;
+    animation: log-pulse 2s ease-in-out infinite;
+}
+@keyframes log-pulse {
+    0%,100% { opacity:1; }
+    50%      { opacity:0.35; }
+}
+
+.console-log {
+    font-family: "SF Mono", "Fira Code", "Consolas", monospace;
+    font-size: 10.5px;
+    line-height: 1.55;
+    color: rgba(180,220,180,0.85);
+    padding: 10px 14px;
+    max-height: 280px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+.console-log::-webkit-scrollbar { width: 3px; }
+.console-log::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius:2px; }
+
+.log-line-error  { color: #ff8a8a; }
+.log-line-warn   { color: #f5c842; }
+.log-line-info   { color: rgba(180,220,180,0.85); }

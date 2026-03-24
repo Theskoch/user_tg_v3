@@ -218,6 +218,66 @@
             <h3>Пользователи</h3>
             <div id="admin-users" class="connections-grid"></div>
         </div>
+
+        <button id="console-open-btn" class="btn ghost" type="button">🖥 Консоль сервера</button>
+    </div>
+
+    <div id="console-page" class="page hidden">
+        <header>
+            <div class="user-avatar" id="user-initial-console"></div>
+            <div class="balance">Консоль</div>
+            <button id="console-back" class="icon-btn" type="button">←</button>
+        </header>
+
+        <div class="console-metrics-grid">
+            <div class="console-metric-card" id="metric-cpu">
+                <div class="metric-label">CPU</div>
+                <div class="metric-value">—</div>
+                <div class="metric-bar-wrap"><div class="metric-bar" id="bar-cpu"></div></div>
+            </div>
+            <div class="console-metric-card" id="metric-ram">
+                <div class="metric-label">RAM</div>
+                <div class="metric-value">—</div>
+                <div class="metric-bar-wrap"><div class="metric-bar" id="bar-ram"></div></div>
+            </div>
+            <div class="console-metric-card" id="metric-disk">
+                <div class="metric-label">Диск</div>
+                <div class="metric-value">—</div>
+                <div class="metric-bar-wrap"><div class="metric-bar" id="bar-disk"></div></div>
+            </div>
+            <div class="console-metric-card">
+                <div class="metric-label">Uptime</div>
+                <div class="metric-value" id="metric-uptime">—</div>
+            </div>
+        </div>
+
+        <div class="console-metrics-grid" style="grid-template-columns:repeat(3,1fr);">
+            <div class="console-stat-card">
+                <div class="metric-label">Пользователи</div>
+                <div class="metric-value" id="stat-users">—</div>
+            </div>
+            <div class="console-stat-card">
+                <div class="metric-label">Конфиги</div>
+                <div class="metric-value" id="stat-configs">—</div>
+            </div>
+            <div class="console-stat-card">
+                <div class="metric-label">Ожидают</div>
+                <div class="metric-value" id="stat-pending">—</div>
+            </div>
+        </div>
+
+        <div class="card glass">
+            <h3>Последние пополнения</h3>
+            <div id="console-topups" class="console-topup-list"></div>
+        </div>
+
+        <div class="console-log-card">
+            <div class="console-log-header">
+                <span>Логи</span>
+                <span class="console-log-dot" id="log-dot"></span>
+            </div>
+            <div id="console-log" class="console-log"></div>
+        </div>
     </div>
 
     <div id="admin-pending-page" class="page hidden">
@@ -318,6 +378,6 @@
         </div>
     </div>
 
-    <script type="module" src="js/main.js?v=6"></script>
+    <script type="module" src="js/main.js?v=7"></script>
 </body>
 </html>

@@ -1,18 +1,19 @@
-import { autoLogin, login, getTelegramUser } from './auth.js?v=6';
-import { renderConnections, fetchConnectionTypes } from './configs.js?v=6';
+import { autoLogin, login, getTelegramUser } from './auth.js?v=7';
+import { renderConnections, fetchConnectionTypes } from './configs.js?v=7';
 import {
   loadTopupHistory,
   loadTopupDetails,
   openTopupSheet
-} from './topup.js?v=6';
+} from './topup.js?v=7';
 import {
   loadAdminUsers,
   loadTariffs,
   updatePendingBadge,
   openAdminUser,
   autoOpenAdminFromQuery
-} from './admin.js?v=6';
-import { apiGet, API_URL } from './api.js?v=6';
+} from './admin.js?v=7';
+import { apiGet, API_URL } from './api.js?v=7';
+import { openConsolePage, closeConsolePage } from './console.js?v=7';
 
 let _isAdmin = false;
 
@@ -46,6 +47,8 @@ const downloadList = document.getElementById('download-list');
 const topupBack    = document.getElementById('topup-back');
 const adminBack    = document.getElementById('admin-back');
 const userInitialDownload = document.getElementById('user-initial-download');
+const consoleOpenBtn = document.getElementById('console-open-btn');
+const consoleBack    = document.getElementById('console-back');
 
 // ─── UI helpers ───────────────────────────────────────────────────────────────
 
@@ -154,6 +157,14 @@ adminBtn?.addEventListener('click', async () => {
 adminBack?.addEventListener('click', () => {
   adminPage?.classList.add('hidden');
   userPage?.classList.remove('hidden');
+});
+
+consoleOpenBtn?.addEventListener('click', () => {
+  openConsolePage(adminPage, document.getElementById('user-initial-admin'));
+});
+
+consoleBack?.addEventListener('click', () => {
+  closeConsolePage(adminPage);
 });
 
 replenishBtn?.addEventListener('click', async () => {
