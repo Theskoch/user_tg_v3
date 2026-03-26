@@ -312,6 +312,7 @@ export async function loadAdminPendingTopups() {
     }
     items.forEach(t => {
       const card = renderTopupCard(t);
+      card.dataset.ticketId = t.id;
       card.addEventListener('click', () => openAdminTopupSheet(t));
       adminPendingList.appendChild(card);
     });
@@ -509,11 +510,39 @@ async function _doTopupAct(action) {
   if (adminTopupApprove) adminTopupApprove.disabled = true;
   if (adminTopupReject)  adminTopupReject.disabled  = true;
   const ticketId = ADMIN_TOPUP_SELECTED.id;
-  closeAdminTopupSheet();          // закрываем мгновенно
+  closeAdminTopupSheet();   // закрываем мгновенно
+
+  // ── Оптимистичное обновление ──────────────────────────────────────────────
+  // Удаляем карточку из списка ожидающих сразу, не дожидаясь сервера
+  if (adminPendingList) {
+    adminPendingList.querySelectorAll('[data-ticket-id]').forEach(el => {
+      if (String(el.dataset.ticketId) === String(ticketId)) el.remove();
+    });
+    // Если список пуст — показываем заглушку
+    if (!adminPendingList.querySelector('[data-ticket-id]')) {
+      adminPendingList.innerHTML = '<div class="conn-sub">Нет платежей на подтверждение</div>';
+    }
+  }
+  // Обновляем бейдж на основе оставшихся карточек
+  const remaining = adminPendingList
+    ? adminPendingList.querySelectorAll('[data-ticket-id]').length
+    : null;
+  if (remaining !== null) {
+    const adminBtnBadge    = document.getElementById('admin-btn-badge');
+    const menuPendingBadge = document.getElementById('menu-pending-badge');
+    [adminBtnBadge, menuPendingBadge].forEach(el => {
+      if (!el) return;
+      if (remaining === 0) { el.classList.add('hidden'); }
+      else { el.textContent = remaining > 99 ? '99+' : String(remaining); }
+    });
+    if (adminPendingCard) adminPendingCard.classList.toggle('hidden', remaining === 0);
+  }
+
+  // ── Запрос к серверу + финальное обновление ───────────────────────────────
   try {
     await apiPost(`${API_URL}/api/admin/topup/act`, { ticket_id: ticketId, action });
   } catch {}
-  await Promise.all([              // обновляем всё параллельно
+  await Promise.all([
     loadAdminTopupHistory(),
     loadAdminPendingTopups(),
     updatePendingBadge(),
