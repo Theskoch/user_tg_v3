@@ -1,4 +1,5 @@
 import os
+import time
 import threading
 import socket
 
@@ -48,7 +49,22 @@ if bot:
         bot.delete_webhook(drop_pending_updates=True)
     except Exception:
         pass
-    threading.Thread(target=lambda: bot.infinity_polling(skip_pending=True), daemon=True).start()
+
+    def _polling_loop():
+        """Keep polling alive — restart automatically if it ever crashes."""
+        while True:
+            try:
+                bot.infinity_polling(
+                    skip_pending=True,
+                    timeout=20,
+                    long_polling_timeout=10,
+                    logger_level=None,   # suppress telebot's own error spam
+                )
+            except Exception as e:
+                log_auth('bot_polling_crashed', error=str(e))
+            time.sleep(5)  # brief pause before reconnect attempt
+
+    threading.Thread(target=_polling_loop, daemon=True).start()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=False)

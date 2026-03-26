@@ -103,8 +103,11 @@ def topup_create():
     ticket = TopUpTicket(user_id=user.id, amount=amount, status='pending', method=method)
     db.session.add(ticket)
     db.session.commit()
-    notify_admins_topup(ticket, user)
-    db.session.commit()
+    try:
+        notify_admins_topup(ticket, user)
+        db.session.commit()
+    except Exception:
+        pass  # ticket is already saved; notifications are best-effort
     return jsonify({'ok': True, 'ticket': ticket.to_dict()})
 
 

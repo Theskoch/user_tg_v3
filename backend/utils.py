@@ -42,7 +42,7 @@ def send_bot_message(chat_id, text):
     if not BOT_TOKEN or not bot:
         return
     try:
-        bot.send_message(chat_id, text)
+        bot.send_message(chat_id, text, timeout=8)
     except Exception as e:
         log_auth('bot_send_error', chat_id=chat_id, error=str(e))
 
@@ -51,23 +51,26 @@ def send_bot_message_with_markup(chat_id, text, markup=None):
     if not BOT_TOKEN or not bot:
         return
     try:
-        bot.send_message(chat_id, text, reply_markup=markup)
+        bot.send_message(chat_id, text, reply_markup=markup, timeout=8)
     except Exception as e:
         log_auth('bot_send_error', chat_id=chat_id, error=str(e))
 
 
 def notify_admins_topup(ticket, user):
-    from db import User
-    admins = User.query.filter_by(is_admin=True).all()
-    if not admins:
-        return
-    text = (
-        f"Пользователь {user.first_name or ''} @{user.username or ''} отправил перевод на сумму "
-        f"{ticket.amount:.2f} ₽. Откройте приложение для подтверждения."
-    )
-    for admin in admins:
-        send_bot_message(admin.telegram_id, text)
-    ticket.last_admin_notify_at = datetime.utcnow()
+    try:
+        from db import User
+        admins = User.query.filter_by(is_admin=True).all()
+        if not admins:
+            return
+        text = (
+            f"Пользователь {user.first_name or ''} @{user.username or ''} отправил перевод на сумму "
+            f"{ticket.amount:.2f} ₽. Откройте приложение для подтверждения."
+        )
+        for admin in admins:
+            send_bot_message(admin.telegram_id, text)
+        ticket.last_admin_notify_at = datetime.utcnow()
+    except Exception as e:
+        log_auth('notify_admins_topup_error', error=str(e))
 
 
 def apply_topup_action(ticket, admin_user, approve: bool):
@@ -83,30 +86,38 @@ def apply_topup_action(ticket, admin_user, approve: bool):
         if user:
             user.balance = float(user.balance or 0) + float(ticket.amount)
         db.session.commit()
-        if user:
-            send_bot_message(user.telegram_id, f"Платёж подтверждён. Баланс пополнен на {ticket.amount:.2f} ₽.")
-        admins = User.query.filter_by(is_admin=True).all()
-        for a in admins:
-            send_bot_message(a.telegram_id, (
-                f"Платёж пользователя {user.first_name or ''} @{user.username or ''} "
-                f"на сумму {ticket.amount:.2f} ₽ подтверждён админом "
-                f"{admin_user.first_name or ''} @{admin_user.username or ''}."
-            ))
+        # Notifications after commit — never crash the action if Telegram is down
+        try:
+            if user:
+                send_bot_message(user.telegram_id, f"Платёж подтверждён. Баланс пополнен на {ticket.amount:.2f} ₽.")
+            admins = User.query.filter_by(is_admin=True).all()
+            for a in admins:
+                send_bot_message(a.telegram_id, (
+                    f"Платёж пользователя {user.first_name or ''} @{user.username or ''} "
+                    f"на сумму {ticket.amount:.2f} ₽ подтверждён админом "
+                    f"{admin_user.first_name or ''} @{admin_user.username or ''}."
+                ))
+        except Exception as e:
+            log_auth('apply_topup_notify_error', action='approve', error=str(e))
     else:
         ticket.status = 'rejected'
         ticket.updated_at = now
         ticket.rejected_at = now
         ticket.rejected_by = admin_user.id
         db.session.commit()
-        if user:
-            send_bot_message(user.telegram_id, "Платёж отклонён администратором.")
-        admins = User.query.filter_by(is_admin=True).all()
-        for a in admins:
-            send_bot_message(a.telegram_id, (
-                f"Платёж пользователя {user.first_name or ''} @{user.username or ''} "
-                f"на сумму {ticket.amount:.2f} ₽ отклонён админом "
-                f"{admin_user.first_name or ''} @{admin_user.username or ''}."
-            ))
+        # Notifications after commit — never crash the action if Telegram is down
+        try:
+            if user:
+                send_bot_message(user.telegram_id, "Платёж отклонён администратором.")
+            admins = User.query.filter_by(is_admin=True).all()
+            for a in admins:
+                send_bot_message(a.telegram_id, (
+                    f"Платёж пользователя {user.first_name or ''} @{user.username or ''} "
+                    f"на сумму {ticket.amount:.2f} ₽ отклонён админом "
+                    f"{admin_user.first_name or ''} @{admin_user.username or ''}."
+                ))
+        except Exception as e:
+            log_auth('apply_topup_notify_error', action='reject', error=str(e))
 
 
 def verify_telegram_init_data(init_data: str, bot_token: str):
