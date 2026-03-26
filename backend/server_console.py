@@ -36,38 +36,54 @@ LOG_LINES = 18  # lines shown in the log panel
 console = Console()
 
 
+def _parse_sqlite_path(url: str) -> str | None:
+    """Extract file path from a sqlite:/// URL."""
+    if not url.startswith('sqlite:///'):
+        return None
+    path = url[len('sqlite:///'):]   # e.g. '/data/users.db' or 'users.db'
+    if not os.path.isabs(path):
+        path = os.path.join(BASE_DIR, path)
+    return path
+
+
 def _resolve_db_path() -> str:
     """Find the SQLite database file.
 
     Priority:
-    1. DATABASE_URL env var (loaded from .env if present)
-    2. backend/instance/users.db  (Flask default instance folder)
-    3. backend/users.db           (flat layout)
+    1. DATABASE_URL environment variable  (set by Docker / shell)
+    2. DATABASE_URL in .env file          (local non-Docker runs)
+    3. backend/instance/users.db          (Flask default instance folder)
+    4. backend/users.db                   (flat layout fallback)
     """
-    # Try to load .env
-    env_file = os.path.join(BASE_DIR, '.env')
-    if os.path.exists(env_file):
-        with open(env_file) as f:
-            for line in f:
-                line = line.strip()
-                if line.startswith('DATABASE_URL='):
-                    val = line.split('=', 1)[1].strip().strip('"').strip("'")
-                    # strip sqlite:/// prefix
-                    if val.startswith('sqlite:///'):
-                        val = val[len('sqlite:///'):]
-                    if not os.path.isabs(val):
-                        val = os.path.join(BASE_DIR, val)
-                    if os.path.exists(val):
-                        return val
+    # 1. Env var (Docker passes variables directly, no file needed)
+    env_url = os.environ.get('DATABASE_URL', '')
+    if env_url:
+        p = _parse_sqlite_path(env_url)
+        if p:
+            return p
 
+    # 2. .env file (for running the script outside Docker)
+    env_file = os.path.join(BASE_DIR, '..', '.env')   # project root .env
+    for ef in [env_file, os.path.join(BASE_DIR, '.env')]:
+        if os.path.exists(ef):
+            with open(ef) as f:
+                for line in f:
+                    line = line.strip()
+                    if line.startswith('DATABASE_URL='):
+                        val = line.split('=', 1)[1].strip().strip('"').strip("'")
+                        p = _parse_sqlite_path(val)
+                        if p and os.path.exists(p):
+                            return p
+
+    # 3 & 4. Common paths
     for candidate in [
         os.path.join(BASE_DIR, 'instance', 'users.db'),
         os.path.join(BASE_DIR, 'users.db'),
+        '/data/users.db',
     ]:
         if os.path.exists(candidate):
             return candidate
 
-    # Return default even if not found — db_query will surface the error
     return os.path.join(BASE_DIR, 'instance', 'users.db')
 
 

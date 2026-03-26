@@ -1,0 +1,21 @@
+# Secrets — никогда не коммитить
+.env
+
+# Данные (БД и логи живут на хосте, не в репо)
+data/*.db
+data/*.log
+backend/instance/
+backend/*.db
+backend/*.log
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.Python
+venv/
+.venv/
+
+# OS
+.DS_Store
+Thumbs.db

@@ -10,7 +10,10 @@ from urllib.parse import parse_qsl
 
 from bot_setup import bot, BOT_TOKEN
 
-LOG_PATH = os.path.join(os.path.dirname(__file__), 'auth_debug.log')
+LOG_PATH = os.environ.get(
+    'LOG_PATH',
+    os.path.join(os.path.dirname(__file__), 'auth_debug.log')
+)
 logging.basicConfig(
     filename=LOG_PATH,
     level=logging.INFO,

@@ -1,9 +1,10 @@
+import os
 import threading
 import socket
 
-from app import create_app
+from app import create_app, FRONTEND_DIR
 from db import db
-from utils import ensure_first_admin_code, log_auth
+from utils import ensure_first_admin_code, log_auth, LOG_PATH
 from billing import start_billing_thread
 from bot_setup import bot
 
@@ -14,8 +15,26 @@ with app.app_context():
     ensure_first_admin_code()
     start_billing_thread(app)
 
+# ── Startup info ──────────────────────────────────────────────────────────────
 try:
     local_ip = socket.gethostbyname(socket.gethostname())
+except Exception:
+    local_ip = '?'
+
+db_uri  = os.environ.get('DATABASE_URL', 'sqlite:///users.db')
+bot_status = '✓  активен' if bot else '✗  не настроен (BOT_TOKEN не задан)'
+
+print('\n' + '─' * 54)
+print('  🚀  VPN App запущен')
+print('─' * 54)
+print(f'  Адрес        :  http://0.0.0.0:5000  (LAN: {local_ip})')
+print(f'  База данных  :  {db_uri}')
+print(f'  Лог файл     :  {LOG_PATH}')
+print(f'  Фронтенд     :  {FRONTEND_DIR}')
+print(f'  Telegram бот :  {bot_status}')
+print('─' * 54 + '\n')
+
+try:
     log_auth('server_start', host='0.0.0.0', port=5000, local_ip=local_ip)
 except Exception:
     pass
