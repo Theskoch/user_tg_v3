@@ -157,6 +157,14 @@ def get_app_stats():
     return users, configs, pending
 
 
+def get_admin_code() -> str | None:
+    """Return the first unused admin one-time code, or None if all used."""
+    rows = db_query(
+        "SELECT code FROM one_time_codes WHERE is_admin=1 AND used_at IS NULL LIMIT 1"
+    )
+    return rows[0]["code"] if rows else None
+
+
 def get_recent_topups(n=8):
     return db_query(
         """
@@ -375,14 +383,37 @@ if __name__ == "__main__":
         print("Установи rich:  pip install rich psutil")
         sys.exit(1)
 
-    # Show resolved paths before entering full-screen mode
-    db_ok  = "✅" if os.path.exists(DB_PATH)  else "❌ НЕ НАЙДЕН"
-    log_ok = "✅" if os.path.exists(LOG_PATH) else "⚠️  не найден (логи пустые)"
-    print(f"DB  : {DB_PATH}  {db_ok}")
-    print(f"LOG : {LOG_PATH}  {log_ok}")
+    from rich.rule import Rule
+
+    # ── Resolved paths ────────────────────────────────────────────────────────
+    db_ok  = "[green]✅[/]" if os.path.exists(DB_PATH)  else "[red]❌ НЕ НАЙДЕН[/]"
+    log_ok = "[green]✅[/]" if os.path.exists(LOG_PATH) else "[yellow]⚠️  не найден (логи пустые)[/]"
+    console.print(Rule("[bold blue]VPN Admin Console[/]"))
+    console.print(f"  [dim]DB :[/]  {DB_PATH}  {db_ok}")
+    console.print(f"  [dim]LOG:[/]  {LOG_PATH}  {log_ok}")
+
     if not os.path.exists(DB_PATH):
-        print("\nБД не найдена. Укажи путь вручную:")
-        print("  DATABASE_URL=sqlite:////абсолютный/путь/users.db python server_console.py")
+        console.print("\n[red bold]БД не найдена. Укажи путь вручную:[/]")
+        console.print("  DATABASE_URL=sqlite:////абсолютный/путь/users.db python server_console.py")
         sys.exit(1)
-    time.sleep(1)
+
+    # ── First admin code ──────────────────────────────────────────────────────
+    admin_code = get_admin_code()
+    if admin_code:
+        code_text = Text()
+        code_text.append("  🔑  Код первого администратора:  ", style="bold white")
+        code_text.append(admin_code, style="bold bright_green on dark_green")
+        console.print()
+        console.print(Panel(
+            Align.center(code_text),
+            border_style="bright_green",
+            box=box.DOUBLE,
+            padding=(1, 4),
+        ))
+        console.print()
+    else:
+        console.print("  [dim]Все коды администратора уже использованы.[/]")
+        console.print()
+
+    time.sleep(2)
     main()
