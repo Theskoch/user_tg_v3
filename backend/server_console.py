@@ -19,11 +19,12 @@ import psutil
 from rich import box
 from rich.align import Align
 from rich.columns import Columns
-from rich.console import Console
+from rich.console import Console, Group
 from rich.layout import Layout
 from rich.live import Live
 from rich.panel import Panel
 from rich.progress import BarColumn, Progress, TextColumn
+from rich.rule import Rule
 from rich.table import Table
 from rich.text import Text
 
@@ -65,10 +66,11 @@ def _resolve_log_path() -> str:
     return os.path.join(BASE_DIR, 'auth_debug.log')
 
 
-LOG_PATH = _resolve_log_path()
+LOG_PATH  = _resolve_log_path()
 LOG_LINES = 18  # lines shown in the log panel
 
-console = Console()
+console    = Console()
+_ADMIN_CODE: str | None = None   # set once in __main__, shown in log panel
 
 
 def _parse_sqlite_path(url: str) -> str | None:
@@ -300,6 +302,23 @@ def make_topups_panel(rows) -> Panel:
 
 
 def make_log_panel() -> Panel:
+    parts = []
+
+    # ── Admin code block (shown until the code is used) ───────────────────────
+    if _ADMIN_CODE:
+        badge = Text(justify="center")
+        badge.append("  🔑  КОД ПЕРВОГО АДМИНИСТРАТОРА  \n\n", style="bold white")
+        badge.append(f"  {_ADMIN_CODE}  ", style="bold bright_green on dark_green")
+        badge.append("\n\n  Введи этот код в приложении чтобы получить права админа  ", style="dim white")
+        parts.append(Panel(
+            Align.center(badge, vertical="middle"),
+            border_style="bright_green",
+            box=box.DOUBLE,
+            padding=(0, 2),
+        ))
+        parts.append(Rule(style="dim green"))
+
+    # ── Log lines ─────────────────────────────────────────────────────────────
     text = Text()
     for raw_line in _log_buf:
         line = raw_line.rstrip("\n")
@@ -311,10 +330,11 @@ def make_log_panel() -> Panel:
         else:
             style = "dim green"
         text.append(line + "\n", style=style)
+    parts.append(text)
 
     now = datetime.utcnow().strftime("%H:%M:%S UTC")
     return Panel(
-        text,
+        Group(*parts),
         title=f"[bold]📜  Лог  [dim](обновлено {now})",
         border_style="blue",
         box=box.ROUNDED,
@@ -383,37 +403,21 @@ if __name__ == "__main__":
         print("Установи rich:  pip install rich psutil")
         sys.exit(1)
 
-    from rich.rule import Rule
-
     # ── Resolved paths ────────────────────────────────────────────────────────
     db_ok  = "[green]✅[/]" if os.path.exists(DB_PATH)  else "[red]❌ НЕ НАЙДЕН[/]"
     log_ok = "[green]✅[/]" if os.path.exists(LOG_PATH) else "[yellow]⚠️  не найден (логи пустые)[/]"
     console.print(Rule("[bold blue]VPN Admin Console[/]"))
     console.print(f"  [dim]DB :[/]  {DB_PATH}  {db_ok}")
     console.print(f"  [dim]LOG:[/]  {LOG_PATH}  {log_ok}")
+    console.print()
 
     if not os.path.exists(DB_PATH):
-        console.print("\n[red bold]БД не найдена. Укажи путь вручную:[/]")
+        console.print("[red bold]БД не найдена. Укажи путь вручную:[/]")
         console.print("  DATABASE_URL=sqlite:////абсолютный/путь/users.db python server_console.py")
         sys.exit(1)
 
-    # ── First admin code ──────────────────────────────────────────────────────
-    admin_code = get_admin_code()
-    if admin_code:
-        code_text = Text()
-        code_text.append("  🔑  Код первого администратора:  ", style="bold white")
-        code_text.append(admin_code, style="bold bright_green on dark_green")
-        console.print()
-        console.print(Panel(
-            Align.center(code_text),
-            border_style="bright_green",
-            box=box.DOUBLE,
-            padding=(1, 4),
-        ))
-        console.print()
-    else:
-        console.print("  [dim]Все коды администратора уже использованы.[/]")
-        console.print()
+    # ── Cache admin code (will be shown persistently in the log panel) ────────
+    _ADMIN_CODE = get_admin_code()
 
-    time.sleep(2)
+    time.sleep(1)
     main()
