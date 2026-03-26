@@ -1,5 +1,5 @@
-import { apiGet, apiPost, API_URL } from './api.js?v=9';
-import { openBottomSheet, closeBottomSheet, copyText, showToast, showNotification } from './ui.js?v=9';
+import { apiGet, apiPost, API_URL } from './api.js?v=10';
+import { openBottomSheet, closeBottomSheet, copyText, showToast, showNotification } from './ui.js?v=10';
 
 // DOM refs
 const topupOverlay    = document.getElementById('topup-overlay');
@@ -48,12 +48,21 @@ export function formatTopupMethod(method) {
 export function renderTopupCard(t) {
   const { text, cls } = formatTopupStatus(t.status);
   const date = t.created_at ? new Date(t.created_at).toLocaleString('ru-RU') : '—';
+
+  let actorLine = '';
+  if (t.status === 'approved' && t.approved_by_name) {
+    actorLine = `<div class="conn-sub topup-actor">✅ Подтвердил: ${t.approved_by_name}</div>`;
+  } else if (t.status === 'rejected' && t.rejected_by_name) {
+    actorLine = `<div class="conn-sub topup-actor">❌ Отклонил: ${t.rejected_by_name}</div>`;
+  }
+
   const card = document.createElement('div');
   card.className = 'conn-card' + (t.status === 'pending' ? ' pending-highlight' : '');
   card.innerHTML = `
     <div class="conn-title">${Number(t.amount || 0).toFixed(2)} ₽</div>
     <div class="conn-sub">${date} • ${formatTopupMethod(t.method)}</div>
     <div class="topup-status ${cls}">${text}</div>
+    ${actorLine}
   `;
   return card;
 }

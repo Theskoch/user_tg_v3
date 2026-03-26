@@ -4,7 +4,7 @@ import {
   loadTopupHistory,
   loadTopupDetails,
   openTopupSheet
-} from './topup.js?v=9';
+} from './topup.js?v=10';
 import {
   loadAdminUsers,
   loadTariffs,

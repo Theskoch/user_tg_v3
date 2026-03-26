@@ -2,7 +2,7 @@ import { apiGet, apiPost, API_URL } from './api.js?v=9';
 import { openBottomSheet, closeBottomSheet, copyText, showToast, showNotification } from './ui.js?v=9';
 import { setAdminSelected, setAdminUsers, setAdminTariffs, adminSelected, adminTariffs } from './state.js?v=9';
 import { handleConfigOpen, openConfigSheet } from './configs.js?v=9';
-import { renderTopupCard, formatTopupMethod } from './topup.js?v=9';
+import { renderTopupCard, formatTopupMethod } from './topup.js?v=10';
 import { startQr, stopQr } from './qr.js?v=9';
 
 // DOM refs — admin panel
