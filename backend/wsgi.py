@@ -12,7 +12,7 @@ app = create_app()
 
 with app.app_context():
     db.create_all()
-    ensure_first_admin_code()
+    admin_code = ensure_first_admin_code()
     start_billing_thread(app)
 
 # ── Startup info ──────────────────────────────────────────────────────────────
@@ -32,6 +32,10 @@ print(f'  База данных  :  {db_uri}')
 print(f'  Лог файл     :  {LOG_PATH}')
 print(f'  Фронтенд     :  {FRONTEND_DIR}')
 print(f'  Telegram бот :  {bot_status}')
+if admin_code:
+    print('─' * 54)
+    print(f'  🔑  КОД ПЕРВОГО АДМИНИСТРАТОРА:')
+    print(f'      {admin_code}')
 print('─' * 54 + '\n')
 
 try:

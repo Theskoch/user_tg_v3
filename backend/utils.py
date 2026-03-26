@@ -158,14 +158,14 @@ def admin_required():
     return user
 
 
-def ensure_first_admin_code():
+def ensure_first_admin_code() -> str | None:
+    """Create (or return existing) unused admin code. Returns the code string."""
     from db import db, OneTimeCode
     existing = OneTimeCode.query.filter_by(is_admin=True, used_at=None).first()
     if existing:
-        print(f"FIRST TIME ADMIN CODE: {existing.code}")
-        return
+        return existing.code
     code = secrets.token_urlsafe(8)
     new_code = OneTimeCode(code=code, is_admin=True)
     db.session.add(new_code)
     db.session.commit()
-    print(f"FIRST TIME ADMIN CODE: {code}")
+    return code

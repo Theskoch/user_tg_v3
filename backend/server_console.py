@@ -29,8 +29,43 @@ from rich.text import Text
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 BASE_DIR  = os.path.dirname(os.path.abspath(__file__))
-LOG_PATH  = os.path.join(BASE_DIR, 'auth_debug.log')
 REFRESH   = 5   # seconds between updates
+
+
+def _resolve_log_path() -> str:
+    """Find the log file.
+
+    Priority:
+    1. LOG_PATH environment variable
+    2. LOG_PATH in .env file
+    3. /data/auth_debug.log  (Docker default)
+    4. backend/auth_debug.log (local fallback)
+    """
+    # 1. Env var
+    env_val = os.environ.get('LOG_PATH', '')
+    if env_val:
+        return env_val
+
+    # 2. .env file
+    for ef in [os.path.join(BASE_DIR, '..', '.env'), os.path.join(BASE_DIR, '.env')]:
+        if os.path.exists(ef):
+            with open(ef) as f:
+                for line in f:
+                    line = line.strip()
+                    if line.startswith('LOG_PATH='):
+                        val = line.split('=', 1)[1].strip().strip('"').strip("'")
+                        if val:
+                            return val
+
+    # 3 & 4. Common paths
+    for candidate in ['/data/auth_debug.log', os.path.join(BASE_DIR, 'auth_debug.log')]:
+        if os.path.exists(candidate):
+            return candidate
+
+    return os.path.join(BASE_DIR, 'auth_debug.log')
+
+
+LOG_PATH = _resolve_log_path()
 LOG_LINES = 18  # lines shown in the log panel
 
 console = Console()
