@@ -378,6 +378,14 @@
         </div>
     </div>
 
+    <!-- App Notification -->
+    <div id="app-notif-overlay" class="app-notif-overlay" onclick="document.getElementById('app-notif').classList.remove('show');this.classList.remove('show')"></div>
+    <div id="app-notif" class="app-notif" data-state="loading">
+        <div class="app-notif-icon" id="app-notif-icon"></div>
+        <div class="app-notif-text" id="app-notif-text"></div>
+        <button class="app-notif-close hidden" id="app-notif-close" onclick="document.getElementById('app-notif').classList.remove('show');document.getElementById('app-notif-overlay').classList.remove('show')">✕</button>
+    </div>
+
     <script type="module" src="js/main.js?v=9"></script>
 </body>
 </html>

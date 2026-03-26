@@ -1,58 +1,43 @@
 // ── App Notification ──────────────────────────────────────────────────────────
-let _notif = null;
-let _notifOverlay = null;
 let _notifTimer = null;
 
-function _ensureNotif() {
-  if (_notif) return;
-  _notifOverlay = document.createElement('div');
-  _notifOverlay.className = 'app-notif-overlay';
-  _notifOverlay.addEventListener('click', hideNotification);
-  document.body.appendChild(_notifOverlay);
-
-  _notif = document.createElement('div');
-  _notif.className = 'app-notif';
-  _notif.innerHTML =
-    '<div class="app-notif-icon"></div>' +
-    '<div class="app-notif-text"></div>' +
-    '<button class="app-notif-close hidden" aria-label="Закрыть">✕</button>';
-  _notif.querySelector('.app-notif-close').addEventListener('click', hideNotification);
-  document.body.appendChild(_notif);
-}
-
 export function showNotification(state, message) {
-  _ensureNotif();
+  const notif   = document.getElementById('app-notif');
+  const overlay = document.getElementById('app-notif-overlay');
+  const iconEl  = document.getElementById('app-notif-icon');
+  const textEl  = document.getElementById('app-notif-text');
+  const closeBtn = document.getElementById('app-notif-close');
+  if (!notif) return;
+
   if (_notifTimer) { clearTimeout(_notifTimer); _notifTimer = null; }
 
-  _notif.dataset.state = state;
-  _notif.querySelector('.app-notif-text').textContent = message;
-
-  const iconEl  = _notif.querySelector('.app-notif-icon');
-  const closeBtn = _notif.querySelector('.app-notif-close');
+  notif.dataset.state = state;
+  textEl.textContent = message;
 
   if (state === 'loading') {
     iconEl.innerHTML = '<div class="notif-spinner"></div>';
     closeBtn.classList.add('hidden');
-    _notifOverlay.classList.remove('show');
-    _notifTimer = setTimeout(hideNotification, 30000); // safety timeout
+    overlay?.classList.remove('show');
+    _notifTimer = setTimeout(hideNotification, 30000);
   } else if (state === 'success') {
     iconEl.innerHTML = '✅';
     closeBtn.classList.add('hidden');
-    _notifOverlay.classList.remove('show');
+    overlay?.classList.remove('show');
     _notifTimer = setTimeout(hideNotification, 2500);
   } else {
     iconEl.innerHTML = '❌';
     closeBtn.classList.remove('hidden');
-    _notifOverlay.classList.add('show'); // click-outside overlay
+    overlay?.classList.add('show');
   }
 
-  _notif.classList.add('show');
+  notif.classList.add('show');
 }
 
 export function hideNotification() {
-  if (!_notif) return;
-  _notif.classList.remove('show');
-  _notifOverlay?.classList.remove('show');
+  const notif   = document.getElementById('app-notif');
+  const overlay = document.getElementById('app-notif-overlay');
+  notif?.classList.remove('show');
+  overlay?.classList.remove('show');
   if (_notifTimer) { clearTimeout(_notifTimer); _notifTimer = null; }
 }
 
