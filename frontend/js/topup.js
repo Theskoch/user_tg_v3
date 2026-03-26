@@ -1,5 +1,5 @@
-import { apiGet, apiPost, API_URL } from './api.js?v=3';
-import { openBottomSheet, closeBottomSheet, copyText, showToast } from './ui.js?v=3';
+import { apiGet, apiPost, API_URL } from './api.js?v=8';
+import { openBottomSheet, closeBottomSheet, copyText, showToast } from './ui.js?v=8';
 
 // DOM refs
 const topupOverlay    = document.getElementById('topup-overlay');
@@ -23,6 +23,7 @@ const topupCopyToast  = document.getElementById('topup-copy-toast');
 const userInitialTopupAll = document.getElementById('user-initial-topup-all');
 
 let TOPUP_DETAILS = { bank_name: 'Т-Банк', phone: '+79857959395' };
+let _topupPending = false;
 
 export async function loadTopupDetails() {
   try {
@@ -61,6 +62,8 @@ export function renderTopupCard(t) {
 
 export function openTopupSheet() {
   if (!topupOverlay || !topupSheet) return;
+  _topupPending = false;
+  if (topupSent) topupSent.disabled = false;
   topupAmountInput.value = '';
   topupStepAmount?.classList.remove('hidden');
   topupStepInfo?.classList.add('hidden');
@@ -134,13 +137,18 @@ topupCopy?.addEventListener('click', async () => {
 });
 
 topupSent?.addEventListener('click', async () => {
+  if (_topupPending) return;
   const amount = parseFloat(String(topupAmountInput?.value || '').replace(',', '.'));
   if (!amount || amount <= 0) return;
+  _topupPending = true;
+  topupSent.disabled = true;
+  closeTopupSheet();                  // закрываем сразу, не ждём сервер
   try {
     await apiPost(`${API_URL}/api/topup/create`, { amount, method: 'transfer' });
-    closeTopupSheet();
-    await loadTopupHistory();
   } catch {}
+  await loadTopupHistory();
+  _topupPending = false;
+  topupSent.disabled = false;
 });
 
 topupHistoryMore?.addEventListener('click', async () => {

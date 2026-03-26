@@ -1,9 +1,9 @@
-import { apiGet, apiPost, API_URL } from './api.js?v=6';
-import { openBottomSheet, closeBottomSheet, copyText, showToast } from './ui.js?v=6';
-import { setAdminSelected, setAdminUsers, setAdminTariffs, adminSelected, adminTariffs } from './state.js?v=6';
-import { handleConfigOpen, openConfigSheet } from './configs.js?v=6';
-import { renderTopupCard, formatTopupMethod } from './topup.js?v=6';
-import { startQr, stopQr } from './qr.js?v=6';
+import { apiGet, apiPost, API_URL } from './api.js?v=8';
+import { openBottomSheet, closeBottomSheet, copyText, showToast } from './ui.js?v=8';
+import { setAdminSelected, setAdminUsers, setAdminTariffs, adminSelected, adminTariffs } from './state.js?v=8';
+import { handleConfigOpen, openConfigSheet } from './configs.js?v=8';
+import { renderTopupCard, formatTopupMethod } from './topup.js?v=8';
+import { startQr, stopQr } from './qr.js?v=8';
 
 // DOM refs — admin panel
 const adminPage        = document.getElementById('admin-page');
@@ -504,25 +504,27 @@ inviteCopyBtn?.addEventListener('click', async () => {
   }
 });
 
-adminTopupApprove?.addEventListener('click', async () => {
+async function _doTopupAct(action) {
   if (!ADMIN_TOPUP_SELECTED) return;
-  await apiPost(`${API_URL}/api/admin/topup/act`, { ticket_id: ADMIN_TOPUP_SELECTED.id, action: 'approve' });
-  closeAdminTopupSheet();
-  await loadAdminTopupHistory();
-  await loadAdminPendingTopups();
-  await updatePendingBadge();
-  await loadAdminUsers();
-});
+  if (adminTopupApprove) adminTopupApprove.disabled = true;
+  if (adminTopupReject)  adminTopupReject.disabled  = true;
+  const ticketId = ADMIN_TOPUP_SELECTED.id;
+  closeAdminTopupSheet();          // закрываем мгновенно
+  try {
+    await apiPost(`${API_URL}/api/admin/topup/act`, { ticket_id: ticketId, action });
+  } catch {}
+  await Promise.all([              // обновляем всё параллельно
+    loadAdminTopupHistory(),
+    loadAdminPendingTopups(),
+    updatePendingBadge(),
+    loadAdminUsers(),
+  ]);
+  if (adminTopupApprove) adminTopupApprove.disabled = false;
+  if (adminTopupReject)  adminTopupReject.disabled  = false;
+}
 
-adminTopupReject?.addEventListener('click', async () => {
-  if (!ADMIN_TOPUP_SELECTED) return;
-  await apiPost(`${API_URL}/api/admin/topup/act`, { ticket_id: ADMIN_TOPUP_SELECTED.id, action: 'reject' });
-  closeAdminTopupSheet();
-  await loadAdminTopupHistory();
-  await loadAdminPendingTopups();
-  await updatePendingBadge();
-  await loadAdminUsers();
-});
+adminTopupApprove?.addEventListener('click', () => _doTopupAct('approve'));
+adminTopupReject?.addEventListener('click',  () => _doTopupAct('reject'));
 
 adminTopupClose?.addEventListener('click', closeAdminTopupSheet);
 adminTopupOverlay?.addEventListener('click', closeAdminTopupSheet);

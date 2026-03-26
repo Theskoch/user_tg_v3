@@ -1,4 +1,4 @@
-import { apiGet, API_URL } from './api.js?v=6';
+import { apiGet, API_URL } from './api.js?v=8';
 
 const consolePage      = document.getElementById('console-page');
 const consoleBack      = document.getElementById('console-back');

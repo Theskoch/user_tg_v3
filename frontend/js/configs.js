@@ -1,6 +1,6 @@
-import { apiGet, apiPost, API_URL } from './api.js?v=3';
-import { adminSelected, connectionTypes, setConnectionTypes } from './state.js?v=3';
-import { openBottomSheet, closeBottomSheet, copyText, showToast } from './ui.js?v=3';
+import { apiGet, apiPost, API_URL } from './api.js?v=8';
+import { adminSelected, connectionTypes, setConnectionTypes } from './state.js?v=8';
+import { openBottomSheet, closeBottomSheet, copyText, showToast } from './ui.js?v=8';
 
 // DOM refs
 const connectionsBox = document.getElementById('connections');

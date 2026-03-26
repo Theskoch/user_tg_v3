@@ -1,19 +1,19 @@
-import { autoLogin, login, getTelegramUser } from './auth.js?v=7';
-import { renderConnections, fetchConnectionTypes } from './configs.js?v=7';
+import { autoLogin, login, getTelegramUser } from './auth.js?v=8';
+import { renderConnections, fetchConnectionTypes } from './configs.js?v=8';
 import {
   loadTopupHistory,
   loadTopupDetails,
   openTopupSheet
-} from './topup.js?v=7';
+} from './topup.js?v=8';
 import {
   loadAdminUsers,
   loadTariffs,
   updatePendingBadge,
   openAdminUser,
   autoOpenAdminFromQuery
-} from './admin.js?v=7';
-import { apiGet, API_URL } from './api.js?v=7';
-import { openConsolePage, closeConsolePage } from './console.js?v=7';
+} from './admin.js?v=8';
+import { apiGet, API_URL } from './api.js?v=8';
+import { openConsolePage, closeConsolePage } from './console.js?v=8';
 
 let _isAdmin = false;
 
