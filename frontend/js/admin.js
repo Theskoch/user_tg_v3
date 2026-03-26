@@ -1,9 +1,9 @@
-import { apiGet, apiPost, API_URL } from './api.js?v=8';
-import { openBottomSheet, closeBottomSheet, copyText, showToast } from './ui.js?v=8';
-import { setAdminSelected, setAdminUsers, setAdminTariffs, adminSelected, adminTariffs } from './state.js?v=8';
-import { handleConfigOpen, openConfigSheet } from './configs.js?v=8';
-import { renderTopupCard, formatTopupMethod } from './topup.js?v=8';
-import { startQr, stopQr } from './qr.js?v=8';
+import { apiGet, apiPost, API_URL } from './api.js?v=9';
+import { openBottomSheet, closeBottomSheet, copyText, showToast, showNotification } from './ui.js?v=9';
+import { setAdminSelected, setAdminUsers, setAdminTariffs, adminSelected, adminTariffs } from './state.js?v=9';
+import { handleConfigOpen, openConfigSheet } from './configs.js?v=9';
+import { renderTopupCard, formatTopupMethod } from './topup.js?v=9';
+import { startQr, stopQr } from './qr.js?v=9';
 
 // DOM refs — admin panel
 const adminPage        = document.getElementById('admin-page');
@@ -510,7 +510,10 @@ async function _doTopupAct(action) {
   if (adminTopupApprove) adminTopupApprove.disabled = true;
   if (adminTopupReject)  adminTopupReject.disabled  = true;
   const ticketId = ADMIN_TOPUP_SELECTED.id;
-  closeAdminTopupSheet();   // закрываем мгновенно
+  closeAdminTopupSheet();
+
+  const loadingText = action === 'approve' ? 'Подтверждаем платёж…' : 'Отклоняем платёж…';
+  showNotification('loading', loadingText);
 
   // ── Оптимистичное обновление ──────────────────────────────────────────────
   // Удаляем карточку из списка ожидающих сразу, не дожидаясь сервера
@@ -541,7 +544,11 @@ async function _doTopupAct(action) {
   // ── Запрос к серверу + финальное обновление ───────────────────────────────
   try {
     await apiPost(`${API_URL}/api/admin/topup/act`, { ticket_id: ticketId, action });
-  } catch {}
+    const okText = action === 'approve' ? 'Платёж подтверждён ✓' : 'Платёж отклонён ✓';
+    showNotification('success', okText);
+  } catch {
+    showNotification('error', 'Ошибка при обработке платежа. Проверьте соединение');
+  }
   await Promise.all([
     loadAdminTopupHistory(),
     loadAdminPendingTopups(),

@@ -1,5 +1,5 @@
-import { apiGet, API_URL } from './api.js?v=8';
-import { setCurrentUser } from './state.js?v=8';
+import { apiGet, API_URL } from './api.js?v=9';
+import { setCurrentUser } from './state.js?v=9';
 
 export const tg = window.Telegram?.WebApp ?? null;
 if (tg) tg.ready();

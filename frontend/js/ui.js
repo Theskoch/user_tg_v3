@@ -1,3 +1,62 @@
+// ── App Notification ──────────────────────────────────────────────────────────
+let _notif = null;
+let _notifOverlay = null;
+let _notifTimer = null;
+
+function _ensureNotif() {
+  if (_notif) return;
+  _notifOverlay = document.createElement('div');
+  _notifOverlay.className = 'app-notif-overlay';
+  _notifOverlay.addEventListener('click', hideNotification);
+  document.body.appendChild(_notifOverlay);
+
+  _notif = document.createElement('div');
+  _notif.className = 'app-notif';
+  _notif.innerHTML =
+    '<div class="app-notif-icon"></div>' +
+    '<div class="app-notif-text"></div>' +
+    '<button class="app-notif-close hidden" aria-label="Закрыть">✕</button>';
+  _notif.querySelector('.app-notif-close').addEventListener('click', hideNotification);
+  document.body.appendChild(_notif);
+}
+
+export function showNotification(state, message) {
+  _ensureNotif();
+  if (_notifTimer) { clearTimeout(_notifTimer); _notifTimer = null; }
+
+  _notif.dataset.state = state;
+  _notif.querySelector('.app-notif-text').textContent = message;
+
+  const iconEl  = _notif.querySelector('.app-notif-icon');
+  const closeBtn = _notif.querySelector('.app-notif-close');
+
+  if (state === 'loading') {
+    iconEl.innerHTML = '<div class="notif-spinner"></div>';
+    closeBtn.classList.add('hidden');
+    _notifOverlay.classList.remove('show');
+    _notifTimer = setTimeout(hideNotification, 30000); // safety timeout
+  } else if (state === 'success') {
+    iconEl.innerHTML = '✅';
+    closeBtn.classList.add('hidden');
+    _notifOverlay.classList.remove('show');
+    _notifTimer = setTimeout(hideNotification, 2500);
+  } else {
+    iconEl.innerHTML = '❌';
+    closeBtn.classList.remove('hidden');
+    _notifOverlay.classList.add('show'); // click-outside overlay
+  }
+
+  _notif.classList.add('show');
+}
+
+export function hideNotification() {
+  if (!_notif) return;
+  _notif.classList.remove('show');
+  _notifOverlay?.classList.remove('show');
+  if (_notifTimer) { clearTimeout(_notifTimer); _notifTimer = null; }
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
 export function showToast(el, duration = 1800) {
   if (!el) return;
   el.classList.add('show');

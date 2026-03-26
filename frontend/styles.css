@@ -474,6 +474,87 @@ button:active,
     table-layout: fixed;
 }
 
+/* ── App Notification (loading / success / error) ────────────────────────── */
+
+.app-notif-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 299;
+    display: none;
+}
+.app-notif-overlay.show { display: block; }
+
+.app-notif {
+    position: fixed;
+    top: 28px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-16px);
+    min-width: 230px;
+    max-width: calc(100vw - 40px);
+    padding: 14px 16px;
+    border-radius: 18px;
+    background: rgba(20, 22, 30, 0.97);
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.55);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    z-index: 300;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.22s ease, transform 0.22s ease;
+    backdrop-filter: blur(20px);
+}
+.app-notif.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+    pointer-events: auto;
+}
+.app-notif[data-state="loading"] { border-color: rgba(100,140,255,0.45); }
+.app-notif[data-state="success"] { border-color: rgba(65,195,111,0.55); }
+.app-notif[data-state="error"]   { border-color: rgba(255,75,75,0.55); }
+
+.app-notif-icon {
+    font-size: 20px;
+    flex-shrink: 0;
+    line-height: 1;
+}
+.app-notif-text {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.4;
+    color: #eef1f6;
+}
+.app-notif[data-state="success"] .app-notif-text { color: #a8f0c0; }
+.app-notif[data-state="error"]   .app-notif-text { color: #ffbbbb; }
+
+.app-notif-close {
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.4);
+    font-size: 15px;
+    cursor: pointer;
+    padding: 2px 2px 2px 6px;
+    line-height: 1;
+    flex-shrink: 0;
+    transition: color 0.15s;
+}
+.app-notif-close:hover { color: rgba(255,255,255,0.8); }
+
+@keyframes notif-spin { to { transform: rotate(360deg); } }
+.notif-spinner {
+    width: 20px;
+    height: 20px;
+    border: 2.5px solid rgba(100,140,255,0.25);
+    border-top-color: #7090ff;
+    border-radius: 50%;
+    animation: notif-spin 0.7s linear infinite;
+    flex-shrink: 0;
+}
+
+/* ── Copy toast ──────────────────────────────────────────────────────────── */
+
 .copy-toast {
     position: fixed;
     left: 50%;

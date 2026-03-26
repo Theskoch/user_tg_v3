@@ -1,5 +1,5 @@
-import { apiGet, apiPost, API_URL } from './api.js?v=8';
-import { openBottomSheet, closeBottomSheet, copyText, showToast } from './ui.js?v=8';
+import { apiGet, apiPost, API_URL } from './api.js?v=9';
+import { openBottomSheet, closeBottomSheet, copyText, showToast, showNotification } from './ui.js?v=9';
 
 // DOM refs
 const topupOverlay    = document.getElementById('topup-overlay');
@@ -142,10 +142,14 @@ topupSent?.addEventListener('click', async () => {
   if (!amount || amount <= 0) return;
   _topupPending = true;
   topupSent.disabled = true;
-  closeTopupSheet();                  // закрываем сразу, не ждём сервер
+  closeTopupSheet();
+  showNotification('loading', 'Отправляем заявку на пополнение…');
   try {
     await apiPost(`${API_URL}/api/topup/create`, { amount, method: 'transfer' });
-  } catch {}
+    showNotification('success', 'Заявка отправлена! Ожидайте подтверждения');
+  } catch {
+    showNotification('error', 'Не удалось отправить заявку. Попробуйте ещё раз');
+  }
   await loadTopupHistory();
   _topupPending = false;
   topupSent.disabled = false;
